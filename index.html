@@ -78,6 +78,29 @@ body.nospeak .vb.std{display:none}body.nowrite .rec{display:none}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn[hidden]{display:none}
 .end{justify-content:flex-end;margin-top:14px}
+.acct{position:absolute;top:14px;right:max(5vw,40px);display:flex;gap:10px;align-items:center;font-size:14px;color:#b9c0cd}
+.acct button{border:1px solid #ffffff40;background:transparent;color:#fff;border-radius:999px;padding:6px 14px;min-height:36px}
+.lock{background:var(--bg);border-radius:10px;padding:12px 14px}.lock button{border:0;background:none;color:var(--ar);text-decoration:underline;padding:0;font-weight:700}
+.lock[hidden]{display:none}
+@media(max-width:600px){.acct{position:static;margin-bottom:14px}}
+.seg{display:flex;background:var(--panel);border-radius:10px;padding:4px;gap:4px;margin:6px 0 10px}
+.seg button{flex:1;border:0;border-radius:8px;background:transparent;color:var(--ink);padding:8px;min-height:40px;font-weight:500}
+.seg button[aria-pressed=true]{background:var(--bg);box-shadow:0 1px 3px #0002}
+#gate{display:none}body.closed #gate{display:block}body.closed main,body.closed #anadir,body.closed .search,body.closed .hint{display:none}
+#admin[hidden]{display:none}
+.lead{color:var(--mute);margin:0 0 20px}
+.acc{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0 0 20px;display:grid;gap:8px}
+.acc legend{font-weight:700;padding:0 6px}
+.opt{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin:0}.opt input{margin-top:5px;width:18px;height:18px}
+.prow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.2fr) auto auto;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.pn small{display:block;color:var(--mute);font-size:13px;margin-top:4px;overflow-wrap:anywhere}
+.ck{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.flab{font-size:14px;font-weight:500;margin-right:4px}
+.ckl{display:inline-flex;gap:6px;align-items:center;font-weight:400;margin:0;min-height:36px}.ckl input{width:18px;height:18px}
+.adm{font-size:14px}
+.pact{display:flex;gap:10px;align-items:center}.btn.sm{padding:8px 14px;min-height:40px}
+.padd{margin-top:24px;border-top:2px solid var(--ink);padding-top:16px}.padd h3{font:700 22px/1.1 Newsreader,Georgia,serif;margin:0}
+@media(max-width:800px){.prow{grid-template-columns:minmax(0,1fr)}}
 .box .msg{text-align:center;min-height:1.4em;margin:6px 0}
 .entry footer{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:8px;font-size:14px;color:var(--mute)}
 .cat{background:var(--panel);border-radius:6px;padding:2px 8px}
@@ -99,10 +122,12 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
 .note{font-size:13px;color:var(--mute);margin-top:22px}
 @media(max-width:700px){.trio,.f3{grid-template-columns:minmax(0,1fr)}.trio{gap:6px}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header class="band">
   <div class="tabs" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="acct" id="acct"></div>
   <div class="wrap">
     <h1>Diccionario de tres voces</h1>
     <p class="sub"><b class="a">Castellano argentino</b> · <b class="e">castellano de España</b> · <b class="c">català</b></p>
@@ -114,11 +139,12 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
   </div>
 </header>
 
+<section class="band" id="gate"><div class="wrap"><h2>Diccionario privado</h2><p>Solo pueden consultarlo las personas dadas de alta.</p><button type="button" class="btn" data-login>Entrar</button></div></section>
 <main class="band">
   <div class="wrap">
     <div class="bar" id="scope"><span class="lbl">Buscar en</span></div>
     <div class="bar" id="cats"></div>
-    <div class="bar" id="sort"><span class="lbl">Ordenar</span><button class="chip" data-sort="mine" aria-pressed="true">Grabadas por nosotros primero</button><button class="chip" data-sort="Jorgelina" aria-pressed="false">Jorgelina primero</button><button class="chip" data-sort="Jordi" aria-pressed="false">Jordi primero</button><button class="chip" data-sort="std" aria-pressed="false">Orden del diccionario</button></div>
+    <div class="bar" id="sort"></div>
     <p class="count" id="count"></p>
     <div id="res"></div>
   </div>
@@ -128,6 +154,7 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
   <div class="wrap">
     <h2>Añadir una entrada</h2>
     <p>Completá al menos dos lenguas. Cada campo tiene su micrófono: tocá, hablá y volvé a tocar para terminar.</p>
+    <p class="lock" id="lock" hidden>Para añadir entradas o grabar tu voz, <button type="button" data-login>entrá con tu cuenta</button>.</p>
     <form id="aform">
       <div class="f3">
         <div><label for="f-ar"><span class="d" style="background:var(--ar)"></span>Argentina</label><div class="fld"><input class="t" id="f-ar" placeholder="ej. pochoclo"><button type="button" class="mic sm" data-for="f-ar" aria-label="Dictar palabra argentina"></button></div></div>
@@ -140,10 +167,45 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
       </div>
       <div class="row"><button class="btn" type="submit" id="save">Guardar entrada</button><span class="msg" id="amsg" role="status"></span></div>
     </form>
-    <p class="note">Incluye unas 80 entradas de partida con las diferencias más habituales; las que añadas se suman a ellas. Cada palabra suena con la voz Standard hasta que grabás la de Jorgelina (Argentina) o la de Jordi (España y català): tocá «Grabar» junto al altavoz.</p>
+    <p class="note">Incluye unas 80 entradas de partida con las diferencias más habituales; las que añadas se suman a ellas. Cada palabra suena con la voz Standard y con la de cada persona que la haya grabado: entrá y tocá «Grabar mi voz» junto al altavoz.</p>
   </div>
 </section>
 
+<section class="band" id="admin" hidden>
+  <div class="wrap">
+    <h2>Personas</h2>
+    <p class="lead">Quién puede entrar, grabar su voz y añadir entradas. Esta sección solo la ven quienes administran.</p>
+    <fieldset class="acc"><legend>Acceso a la app</legend>
+      <label class="opt"><input type="radio" name="pub" value="1"> <span><b>Pública:</b> cualquiera con el enlace puede consultar y escuchar</span></label>
+      <label class="opt"><input type="radio" name="pub" value="0"> <span><b>Privada:</b> solo las personas de esta lista</span></label>
+    </fieldset>
+    <div id="plist"></div>
+    <form id="pform" class="padd">
+      <h3>Añadir una persona</h3>
+      <div class="f3">
+        <div><label for="p-nom">Nombre (el que aparece junto al altavoz)</label><input class="t" id="p-nom" required maxlength="30" placeholder="ej. Martina"></div>
+        <div><label for="p-mail">Email</label><input class="t" id="p-mail" type="email" required placeholder="martina@email.com"></div>
+        <div><span class="flab">Graba en</span><div class="ck"><label class="ckl"><input type="checkbox" name="nl" value="ar"> AR</label><label class="ckl"><input type="checkbox" name="nl" value="es"> ES</label><label class="ckl"><input type="checkbox" name="nl" value="ca"> CA</label></div><label class="ckl adm"><input type="checkbox" id="p-adm"> Administra (puede gestionar personas)</label></div>
+      </div>
+      <div class="row"><button class="btn">Añadir</button><span class="msg" id="pmsg" role="status"></span></div>
+    </form>
+    <p class="note">La persona nueva abre la app, toca «Entrar → Primera vez» con ese email y elige su contraseña. Si alguien olvida la contraseña, borrá su usuario en Supabase (Authentication → Users) y que vuelva a hacer «Primera vez».</p>
+  </div>
+</section>
+
+<div class="dlg" id="ldlg" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="lt">
+    <h3 id="lt">Entrar</h3>
+    <div class="seg" id="lseg"><button type="button" data-lm="in" aria-pressed="true">Ya tengo contraseña</button><button type="button" data-lm="up" aria-pressed="false">Primera vez</button></div>
+    <p id="lhelp"></p>
+    <form id="lform">
+      <label for="lmail">Email</label><input class="t" id="lmail" type="email" placeholder="tu@email.com" autocomplete="email" required>
+      <label for="lpass" style="margin-top:10px">Contraseña</label><input class="t" id="lpass" type="password" minlength="6" autocomplete="current-password" required>
+      <p class="msg" id="lmsg" role="status"></p>
+      <div class="row end"><button type="button" class="btn ghost" id="lcancel">Cancelar</button><button class="btn" id="lsend">Entrar</button></div>
+    </form>
+  </div>
+</div>
 <div class="dlg" id="dlg" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="dt">
     <h3 id="dt"></h3>
@@ -166,9 +228,13 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
 
 <script>
 {
+// ▼▼▼ PEGÁ AQUÍ TUS DOS DATOS DE SUPABASE (entre las comillas) ▼▼▼
+const SUPABASE_URL="https://vdklrwxlensglcqoxwgd.supabase.co";
+const SUPABASE_KEY="sb_publishable_e_0ms8z5WWP4ZlOeqelFQw_4g9c6j_q";
+// ▲▲▲ no hace falta tocar nada más ▲▲▲
 const MIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
 const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
-const LANGS=[{k:"ar",n:"Argentina",tag:"AR",tts:"es-AR",voice:"Jorgelina"},{k:"es",n:"España",tag:"ES",tts:"es-ES",voice:"Jordi"},{k:"ca",n:"Català",tag:"CA",tts:"ca-ES",voice:"Jordi"}];
+const LANGS=[{k:"ar",n:"Argentina",tag:"AR",tts:"es-AR"},{k:"es",n:"España",tag:"ES",tts:"es-ES"},{k:"ca",n:"Català",tag:"CA",tts:"ca-ES"}];
 let VOC={};const ACACHE={};
 const SEED=[
 ["colectivo","autobús","autobús","Transporte"],["auto","coche","cotxe","Transporte"],["subte","metro","metro","Transporte"],["manejar","conducir","conduir","Transporte"],["estacionar","aparcar","aparcar","Transporte"],["boleto","billete","bitllet","Transporte"],["nafta","gasolina","gasolina","Transporte"],["ruta","carretera","carretera","Transporte"],["vereda","acera","vorera","Transporte"],["cuadra","manzana (calle)","illa de cases","Transporte","En Argentina se cuentan las distancias por cuadras."],["tomar el colectivo","coger el autobús","agafar l'autobús","Transporte"],
@@ -181,7 +247,7 @@ const SEED=[
 ["dale","vale","d'acord (va)","Expresiones"],["¿qué onda?","¿qué tal?","què tal?","Expresiones"],["¡qué copado!","¡qué guay!","quina passada!","Expresiones"],["re (re lindo)","muy (muy bonito)","molt (molt bonic)","Expresiones"],["lindo","bonito (mono)","bonic (maco)","Expresiones"],["plata","dinero (pasta)","diners (calés)","Expresiones"],["laburo","curro","feina","Expresiones"],["quilombo","lío","embolic","Expresiones"],["fiaca","pereza","mandra","Expresiones"],["bronca","rabia","ràbia","Expresiones"],["pibe","chaval","noi (xaval)","Expresiones"],["nene / nena","niño / niña","nen / nena","Expresiones"],["pucho","cigarro (piti)","cigarreta","Expresiones"]
 ];
 const base=SEED.map((r,i)=>({id:"s"+i,ar:r[0],es:r[1],ca:r[2],cat:r[3],nota:r[4]||"",own:false}));
-let added=[],db=null,dict=null,tts=null,canWrite=true,mode="mem";
+let added=[],sb=null,session=null,ME=null,PUBLICO=true,dict=null,tts=null,canWrite=true,mode="mem";
 const S={q:"",scope:"all",target:null,cat:"Todo",sort:"mine"};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -197,21 +263,26 @@ const cats=()=>["Todo",...new Set([...base,...added].map(e=>e.cat))];
 // filtros
 $("scope").insertAdjacentHTML("beforeend",[["all","Las tres"],...LANGS.map(l=>[l.k,l.n])].map(([k,n])=>`<button class="chip" data-scope="${k}" aria-pressed="${k==="all"}">${n}</button>`).join(""));
 $("scope").onclick=e=>{const b=e.target.closest("[data-scope]");if(!b)return;S.scope=b.dataset.scope;$("scope").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render()};
-$("sort").onclick=e=>{const b=e.target.closest("[data-sort]");if(!b)return;S.sort=b.dataset.sort;$("sort").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render()};
+$("sort").onclick=e=>{const b=e.target.closest("[data-sort]");if(!b)return;S.sort=b.dataset.sort;render()};
 $("cats").onclick=e=>{const b=e.target.closest("[data-cat]");if(!b)return;S.cat=b.dataset.cat;S.q="";$("q").value="";render()};
 function renderCats(){$("cats").innerHTML='<span class="lbl">Temas</span>'+cats().map(c=>`<button class="chip" data-cat="${esc(c)}" aria-pressed="${!S.q&&S.cat===c}">${esc(c)}</button>`).join("");
  const sel=$("f-cat"),cur=sel.value;sel.innerHTML=[...new Set([...cats().slice(1),"Mis entradas"])].map(c=>`<option>${esc(c)}</option>`).join("");sel.value=cur||"Mis entradas"}
 
+function renderSort(){const ps=[...new Set(Object.values(VOC).flatMap(o=>Object.keys(o)))].sort((a,b)=>a.localeCompare(b,"es"));
+ if(S.sort!=="mine"&&S.sort!=="std"&&!ps.includes(S.sort))S.sort="mine";
+ $("sort").innerHTML='<span class="lbl">Ordenar</span>'+[["mine","Grabadas primero"],...ps.map(p=>[p,p+" primero"]),["std","Orden del diccionario"]].map(([k,n])=>`<button class="chip" data-sort="${esc(k)}" aria-pressed="${S.sort===k}">${esc(n)}</button>`).join("")}
 function card(e,hit){return `<article class="entry"><div class="trio">${LANGS.map(l=>{const w=e[l.k];if(!w)return `<div class="cell ${l.k}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">—</div></div>`;
- const k=akey(l.k,w),mine=VOC[k],ew=esc(w);
- return `<div class="cell ${l.k}${hit===l.k?" hit":""}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">${ew}</div><div class="vz">${mine?`<button class="vb mine" data-play="${esc(k)}" aria-label="Escuchar «${ew}» con la voz de ${l.voice}">${SPK}<span>${l.voice}</span></button>`:""}<button class="vb std" data-say="${ew}" data-l="${l.k}" aria-label="Escuchar «${ew}» con la voz Standard">${SPK}<span>Standard</span></button><button class="rec" data-rec="${esc(k)}" data-w="${ew}" data-l="${l.k}">${mine?"Cambiar":"Grabar"} ${l.voice}</button></div></div>`}).join("")}</div><footer><span class="cat">${esc(e.cat)}</span>${e.nota?`<span>${esc(e.nota)}</span>`:""}${e.own&&canWrite?`<button class="del" data-del="${esc(e.id)}">Eliminar</button>`:""}</footer></article>`}
+ const k=akey(l.k,w),vs=VOC[k]||{},ew=esc(w),my=ME&&ME.nombre,names=Object.keys(vs).sort((a,b)=>(b===my)-(a===my)||a.localeCompare(b,"es"));
+ const canRec=ME&&ME.lenguas.includes(l.k);
+ return `<div class="cell ${l.k}${hit===l.k?" hit":""}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">${ew}</div><div class="vz">${names.map(n=>`<button class="vb mine" data-play="${esc(k)}" data-p="${esc(n)}" aria-label="Escuchar «${ew}» con la voz de ${esc(n)}">${SPK}<span>${esc(n)}</span></button>`).join("")}<button class="vb std" data-say="${ew}" data-l="${l.k}" aria-label="Escuchar «${ew}» con la voz Standard">${SPK}<span>Standard</span></button>${canRec?`<button class="rec" data-rec="${esc(k)}" data-w="${ew}" data-l="${l.k}">${vs[my]?"Cambiar mi voz":"Grabar mi voz"}</button>`:""}</div></div>`}).join("")}</div><footer><span class="cat">${esc(e.cat)}</span>${e.nota?`<span>${esc(e.nota)}</span>`:""}${e.own&&canWrite?`<button class="del" data-del="${esc(e.id)}">Eliminar</button>`:""}</footer></article>`}
 function render(){renderCats();const all=[...added,...base],q=norm(S.q);let rows;
  if(q){rows=all.map(e=>({e,...score(e,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s)}else rows=all.filter(e=>S.cat==="Todo"||e.cat===S.cat).map(e=>({e,hit:null}));
- if(S.sort!=="std"){const rk=e=>LANGS.reduce((n,l)=>n+(e[l.k]&&VOC[akey(l.k,e[l.k])]&&(S.sort==="mine"||l.voice===S.sort)?1:0),0);
+ renderSort();
+ if(S.sort!=="std"){const rk=e=>LANGS.reduce((n,l)=>{const vs=e[l.k]&&VOC[akey(l.k,e[l.k])];return n+(vs&&(S.sort==="mine"?Object.keys(vs).length:vs[S.sort])?1:0)},0);
   rows=rows.map((r,i)=>({...r,i,m:rk(r.e)})).sort((a,b)=>(b.m>0)-(a.m>0)||b.m-a.m||a.i-b.i)}
  const nm=rows.filter(r=>r.m>0).length;
  const tl=S.target&&LANGS.find(l=>l.k===S.target);
- $("count").innerHTML=(q?`${rows.length} resultado${rows.length===1?"":"s"} para «${esc(S.q)}»`:`${rows.length} entradas · ${esc(S.cat)}`)+(S.sort!=="std"?` · ${nm} con voz ${S.sort==="mine"?"grabada":"de "+S.sort}`:"")+(tl?`<span class="target">Traducir a ${tl.n}<button data-untarget aria-label="Quitar destino">✕</button></span>`:"");
+ $("count").innerHTML=(q?`${rows.length} resultado${rows.length===1?"":"s"} para «${esc(S.q)}»`:`${rows.length} entradas · ${esc(S.cat)}`)+(S.sort!=="std"?` · ${nm} con voz ${S.sort==="mine"?"grabada":"de "+esc(S.sort)}`:"")+(tl?`<span class="target">Traducir a ${tl.n}<button data-untarget aria-label="Quitar destino">✕</button></span>`:"");
  $("res").innerHTML=rows.length?rows.map(r=>card(r.e,r.hit)).join(""):`<div class="empty">No encontré «${esc(S.q)}» en el diccionario.<br><button class="btn" data-addq>Añadirla como entrada nueva</button></div>`}
 $("count").onclick=e=>{if(e.target.closest("[data-untarget]")){S.target=null;render()}};
 $("q").addEventListener("input",()=>{S.q=$("q").value;if(!S.q)S.target=null;render()});
@@ -232,7 +303,7 @@ function micClick(btn,input){if(!dict){$("hint").textContent="El dictado por voz
  if(dTarget){dict.stop().catch(()=>{});return}
  dTarget=input;dBtn=btn;dBase=input.id==="q"?"":input.value;if(input.id==="q")input.value="";btn.classList.add("on");
  if(input.id==="q"){$("hint").textContent="Te escucho… tocá el micrófono de nuevo para terminar.";$("hint").classList.add("live")}
- dict.start().catch(e=>{endDict(false);$("hint").textContent=e&&e.code==="not_granted"?"Sin permiso para el micrófono: podés escribir.":"No se pudo empezar a escuchar. Probá otra vez."})}
+ dict.start(input.id==="f-ar"||(input.id==="q"&&S.scope==="ar")?"es-AR":input.id==="f-ca"||(input.id==="q"&&S.scope==="ca")?"ca-ES":"es-ES",input.id!=="q").catch(e=>{endDict(false);$("hint").textContent=e&&e.code==="not_granted"?"Sin permiso para el micrófono: podés escribir.":"No se pudo empezar a escuchar. Probá otra vez."})}
 function endDict(run=true){const t=dTarget;dTarget=null;if(dBtn)dBtn.classList.remove("on");dBtn=null;$("hint").classList.remove("live");
  if(!t)return;if(t.id==="q"){$("hint").textContent="Probá decir: «¿Cómo se dice frutilla en catalán?»";if(run&&t.value.trim())runVoiceLike(t.value)}}
 $("qmic").onclick=()=>micClick($("qmic"),$("q"));
@@ -245,26 +316,26 @@ async function say(btn){const w=btn.dataset.say.replace(/\(.*?\)/g,"").replace(/
  btn.classList.remove("on")}
 function local(w,lang){return new Promise((ok,ko)=>{if(!("speechSynthesis"in window))return ko();const u=new SpeechSynthesisUtterance(w);u.lang=lang;const v=speechSynthesis.getVoices().find(v=>v.lang.replace("_","-").startsWith(lang))||speechSynthesis.getVoices().find(v=>v.lang.startsWith(lang.slice(0,2)));if(v)u.voice=v;u.onend=ok;u.onerror=ko;speechSynthesis.cancel();speechSynthesis.speak(u)})}
 
-// voces grabadas (Jorgelina / Jordi)
+// voces grabadas: VOC[clave][persona] = {archivo, t}
 let player=null;
-function stopAll(){document.querySelectorAll(".vb.on").forEach(x=>x.classList.remove("on"));if(player){player.pause();player=null}try{tts&&tts.stop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
-async function getAudio(k){if(ACACHE[k])return ACACHE[k];if(!db)return null;const s=await db.doc("audiodata/"+k).get();const u=s.exists&&s.data().wav;if(typeof u==="string"&&u.startsWith("data:audio/wav;base64,")){ACACHE[k]=u;return u}return null}
-async function playMine(btn){const k=btn.dataset.play;stopAll();btn.classList.add("on");
- try{const u=await getAudio(k);if(!u)throw 0;const a=new Audio(u);player=a;a.onended=a.onerror=()=>btn.classList.remove("on");await a.play()}
+function stopAll(){document.querySelectorAll(".vb.on").forEach(x=>x.classList.remove("on"));if(player){player.pause();player=null}try{speechSynthesis.cancel()}catch(e){}}
+async function getAudio(k,p){const ck=k+"|"+p;if(ACACHE[ck])return ACACHE[ck];const f=VOC[k]&&VOC[k][p]&&VOC[k][p].archivo;if(!sb||!f)return null;const u=sb.storage.from("audios").getPublicUrl(f).data.publicUrl;if(typeof u==="string"&&u.startsWith("https://")){ACACHE[ck]=u;return u}return null}
+async function playMine(btn){stopAll();btn.classList.add("on");
+ try{const u=await getAudio(btn.dataset.play,btn.dataset.p);if(!u)throw 0;const a=new Audio(u);player=a;a.onended=a.onerror=()=>btn.classList.remove("on");await a.play()}
  catch(e){btn.classList.remove("on");amsg("No se pudo reproducir esa grabación.")}}
 
-const R={k:null,l:null,w:"",data:null,mr:null,timer:null};
+const R={k:null,l:null,w:"",p:"",data:null,blob:null,mr:null,timer:null};
 const rmsg=t=>$("rmsg").textContent=t;
-function openRec(b){const l=LANGS.find(x=>x.k===b.dataset.l);Object.assign(R,{k:b.dataset.rec,l,w:b.dataset.w,data:null});
- $("dt").textContent=`Voz de ${l.voice}: «${R.w}»`;$("dsub").textContent=`${l.n}. Grabá la palabra (hasta 4 segundos). Se recorta el silencio y se guarda en lugar de Standard.`;
+function openRec(b){if(!ME)return openLogin();const l=LANGS.find(x=>x.k===b.dataset.l);Object.assign(R,{k:b.dataset.rec,l,w:b.dataset.w,p:ME.nombre,data:null,blob:null});
+ $("dt").textContent=`Voz de ${R.p}: «${R.w}»`;$("dsub").textContent=`${l.n}. Grabá la palabra (hasta 4 segundos). Se recorta el silencio y queda junto a las demás voces.`;
  $("rbtn").hidden=!(navigator.mediaDevices&&window.MediaRecorder);$("rbtn").textContent="Grabar";$("rbtn").classList.remove("on");
- $("rtime").textContent="";rmsg("");$("rplay").hidden=true;$("rsave").disabled=true;$("rsave").textContent=`Guardar voz de ${l.voice}`;$("rdel").hidden=!VOC[R.k];
+ $("rtime").textContent="";rmsg("");$("rplay").hidden=true;$("rsave").disabled=true;$("rsave").textContent=`Guardar voz de ${R.p}`;$("rdel").hidden=!(VOC[R.k]&&VOC[R.k][R.p]);$("rdel").textContent="Quitar mi voz";
  $("dlg").hidden=false;$("rcancel").focus()}
 function closeRec(){if(R.mr&&R.mr.state==="recording"){R.mr.onstop=null;R.mr.stop()}clearInterval(R.timer);if(player){player.pause();player=null}$("dlg").hidden=true}
 $("rcancel").onclick=closeRec;$("dlg").onclick=e=>{if(e.target===$("dlg"))closeRec()};
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("dlg").hidden)closeRec()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("dlg").hidden)closeRec();if(!$("ldlg").hidden)$("ldlg").hidden=true});
 $("rbtn").onclick=async()=>{if(R.mr&&R.mr.state==="recording"){R.mr.stop();return}
- let st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){$("rbtn").hidden=true;rmsg("Aquí el navegador no deja usar el micrófono. Usá «Grabar con el móvil» o subí un archivo.");return}
+ let st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){$("rbtn").hidden=true;rmsg("El navegador no deja usar el micrófono. Revisá el permiso del candado junto a la dirección, o usá «Grabar con el móvil».");return}
  const ch=[];const mr=new MediaRecorder(st);R.mr=mr;mr.ondataavailable=e=>e.data.size&&ch.push(e.data);
  mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(R.timer);$("rbtn").classList.remove("on");$("rbtn").textContent="Otra vez";prep(new Blob(ch,{type:mr.mimeType||"audio/webm"}))};
  mr.start();const t0=Date.now();$("rbtn").classList.add("on");$("rbtn").textContent="Parar";rmsg("Grabando… decí la palabra.");
@@ -272,7 +343,7 @@ $("rbtn").onclick=async()=>{if(R.mr&&R.mr.state==="recording"){R.mr.stop();retur
 ["rcap","rfile"].forEach(id=>$(id).onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(f)prep(f)});
 async function prep(blob){rmsg("Procesando audio…");$("rsave").disabled=true;
  try{if(blob.size>30*1024*1024)throw new Error("grande");const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();let ab;try{ab=await ac.decodeAudioData(await blob.arrayBuffer())}finally{try{ac.close()}catch(e){}}
-  R.data=await toWav(ab);$("rtime").textContent=R.dur.toFixed(1)+" s";$("rplay").hidden=false;$("rsave").disabled=!canWrite;rmsg(canWrite?"Escuchala y, si te gusta, guardala.":"No tenés permiso para guardar voces aquí.")}
+  const o=await toWav(ab);R.data=o.url;R.blob=o.blob;$("rtime").textContent=R.dur.toFixed(1)+" s";$("rplay").hidden=false;$("rsave").disabled=false;rmsg("Escuchala y, si te gusta, guardala.")}
  catch(e){R.data=null;rmsg("No pude leer ese audio. Probá con otro archivo (m4a, mp3, wav, ogg…).")}}
 async function toWav(ab){const n=ab.length,c=ab.numberOfChannels,m=new Float32Array(n);for(let i=0;i<c;i++){const d=ab.getChannelData(i);for(let j=0;j<n;j++)m[j]+=d[j]/c}
  let pk=0;for(let j=0;j<n;j++)pk=Math.max(pk,Math.abs(m[j]));if(pk<0.005)throw new Error("silencio");
@@ -281,23 +352,29 @@ async function toWav(ab){const n=ab.length,c=ab.numberOfChannels,m=new Float32Ar
  const buf=new ArrayBuffer(44+len*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
  w(0,"RIFF");v.setUint32(4,36+len*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,len*2,true);
  for(let i=0;i<len;i++){const p=a+i*ratio,i0=Math.floor(p),f=p-i0,x=(m[i0]*(1-f)+(m[Math.min(i0+1,n-1)]||0)*f)*g;v.setInt16(44+i*2,Math.max(-1,Math.min(1,x))*32767,true)}
- return await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ko;r.readAsDataURL(new Blob([buf],{type:"audio/wav"}))})}
+ const blob=new Blob([buf],{type:"audio/wav"});return{blob,url:URL.createObjectURL(blob)}}
 $("rplay").onclick=()=>{if(!R.data)return;if(player)player.pause();player=new Audio(R.data);player.play().catch(()=>{})};
-$("rsave").onclick=async()=>{if(!R.data)return;$("rsave").disabled=true;rmsg("Guardando…");const k=R.k,meta={lang:R.l.k,word:R.w,t:Date.now()};
- try{if(db){await db.doc("audiodata/"+k).set({wav:R.data});await db.doc("voces/"+k).set(meta)}ACACHE[k]=R.data;VOC={...VOC,[k]:meta};render();
-  if(!db)amsg("Voz guardada solo durante esta visita.");closeRec()}
- catch(e){$("rsave").disabled=false;rmsg(e&&e.code==="quota_exceeded"?"No queda espacio para más grabaciones.":e&&e.code==="invalid_argument"?"No tenés permiso para guardar voces aquí.":"No se pudo guardar. Probá otra vez.")}};
-$("rdel").onclick=async()=>{const k=R.k;$("rdel").disabled=true;
- try{if(db){await db.doc("voces/"+k).delete();await db.doc("audiodata/"+k).delete()}delete ACACHE[k];const c={...VOC};delete c[k];VOC=c;render();closeRec()}
+const slug=s=>norm(s).replace(/ /g,"-")||"x";
+$("rsave").onclick=async()=>{if(!R.data)return;$("rsave").disabled=true;rmsg("Guardando…");const k=R.k,p=R.p,cur=(VOC[k]||{})[p];
+ try{if(sb){const path=k.replace(/[^a-z0-9-]/gi,"_")+"__"+slug(p)+"-"+Date.now()+".wav",old=cur&&cur.archivo;
+   const up=await sb.storage.from("audios").upload(path,R.blob,{contentType:"audio/wav",upsert:true});if(up.error)throw up.error;
+   const r=await sb.from("voces").upsert({clave:k,persona:p,lang:R.l.k,palabra:R.w,archivo:path,updated_at:new Date().toISOString()},{onConflict:"clave,persona"});if(r.error)throw r.error;
+   if(old&&old!==path)sb.storage.from("audios").remove([old]);delete ACACHE[k+"|"+p];await loadAll()}
+  else{ACACHE[k+"|"+p]=R.data;VOC={...VOC,[k]:{...(VOC[k]||{}),[p]:{t:Date.now()}}};render();amsg("Voz guardada solo durante esta visita.")}
+  closeRec()}
+ catch(e){$("rsave").disabled=false;rmsg("No se pudo guardar. Probá otra vez.")}};
+$("rdel").onclick=async()=>{const k=R.k,p=R.p;$("rdel").disabled=true;
+ try{if(sb){const old=VOC[k]&&VOC[k][p]&&VOC[k][p].archivo;const r=await sb.from("voces").delete().eq("clave",k).eq("persona",p);if(r.error)throw r.error;if(old)await sb.storage.from("audios").remove([old]);delete ACACHE[k+"|"+p];await loadAll()}
+  else{delete ACACHE[k+"|"+p];const c={...(VOC[k]||{})};delete c[p];VOC={...VOC,[k]:c};render()}closeRec()}
  catch(e){rmsg("No se pudo quitar la grabación.")}$("rdel").disabled=false};
 
 $("res").onclick=e=>{const s=e.target.closest(".vb.std");if(s)return say(s);
  const p=e.target.closest("[data-play]");if(p)return playMine(p);
  const r=e.target.closest("[data-rec]");if(r)return openRec(r);
  const d=e.target.closest("[data-del]");if(d)return del(d.dataset.del);
- if(e.target.closest("[data-addq]")){const k=S.scope==="all"?(S.target?"ar":"ar"):S.scope;$("f-"+k).value=S.q;$("anadir").scrollIntoView({behavior:"smooth"});$("f-"+(k==="ar"?"es":"ar")).focus()}};
+ if(e.target.closest("[data-addq]")){const k=S.scope==="all"?"ar":S.scope;$("f-"+k).value=S.q;$("anadir").scrollIntoView({behavior:"smooth"});$("f-"+(k==="ar"?"es":"ar")).focus()}};
 
-// guardar entradas
+// entradas
 const LKEY="dic3-entradas";
 function loadLocal(){mode="local";try{const a=JSON.parse(localStorage.getItem(LKEY)||"[]");added=a.map(v=>({id:str(v.id),ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true}))}catch(e){mode="mem"}render()}
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(added))}catch(e){mode="mem"}}
@@ -307,29 +384,100 @@ $("aform").onsubmit=async e=>{e.preventDefault();if(dTarget)dict.stop().catch(()
  if([v.ar,v.es,v.ca].filter(Boolean).length<2)return amsg("Completá al menos dos de las tres lenguas.");
  const dup=[...base,...added].find(x=>LANGS.every(l=>!v[l.k]||norm(x[l.k])===norm(v[l.k])));if(dup)return amsg("Esa entrada ya está en el diccionario.");
  $("save").disabled=true;
- try{if(db){await db.collection("entradas").add({...v,t:Date.now()})}else{added.unshift({id:"l"+Date.now(),...v,own:true});saveLocal();render()}
+ try{if(sb){const r=await sb.from("entradas").insert(v);if(r.error)throw r.error;await loadAll()}else{added.unshift({id:"l"+Date.now(),...v,own:true});saveLocal();render()}
   ["f-ar","f-es","f-ca","f-nota"].forEach(id=>$(id).value="");amsg(mode==="mem"?"Guardada (solo durante esta visita).":"Guardada.");S.q=v.ar||v.es;$("q").value=S.q;S.target=null;render();
   setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),300)}
- catch(err){amsg(err&&err.code==="quota_exceeded"?"El diccionario está lleno: eliminá alguna entrada.":err&&err.code==="invalid_argument"?"No tenés permiso para añadir entradas aquí.":"No se pudo guardar. Probá otra vez.");if(err&&err.code==="invalid_argument"){canWrite=false;lockForm()}}
+ catch(err){amsg("No se pudo guardar. Probá otra vez.")}
  $("save").disabled=!canWrite};
-async function del(id){try{if(db)await db.collection("entradas").doc(id).delete();else{added=added.filter(x=>x.id!==id);saveLocal();render()}}catch(e){amsg("No se pudo eliminar.")}}
-function lockForm(){document.body.classList.add("nowrite");$("aform").querySelectorAll("input,select,button").forEach(x=>x.disabled=true);amsg("Podés consultar el diccionario, pero no añadir entradas.")}
+async function del(id){try{if(sb){const r=await sb.from("entradas").delete().eq("id",id);if(r.error)throw r.error;await loadAll()}else{added=added.filter(x=>x.id!==id);saveLocal();render()}}catch(e){amsg("No se pudo eliminar.")}}
+function setWrite(on){canWrite=on;document.body.classList.toggle("nowrite",!on);$("aform").querySelectorAll("input,select,button").forEach(x=>x.disabled=!on);$("lock").hidden=on||!sb;render()}
+
+// voz: reconocimiento del navegador
+const SRec=window.SpeechRecognition||window.webkitSpeechRecognition;
+dict=SRec?(()=>{let rec=null;const h={};return{onPartial:f=>h.p=f,onFinal:f=>h.f=f,onState:f=>h.s=f,
+ start(lang,cont){return new Promise((ok,ko)=>{rec=new SRec();rec.lang=lang;rec.interimResults=true;rec.continuous=cont;
+  rec.onstart=()=>{h.s&&h.s({state:"listening"});ok()};
+  rec.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)h.f&&h.f({text:r[0].transcript});else t+=r[0].transcript}h.p&&h.p({text:t})};
+  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed")ko({code:"not_granted"})};
+  rec.onend=()=>{h.s&&h.s({state:"idle"})};
+  try{rec.start()}catch(err){ko(err)}})},
+ stop(){try{rec&&rec.stop()}catch(e){}return Promise.resolve()}}})():null;
+if(dict){dict.onPartial(({text})=>{if(dTarget)dTarget.value=join(dBase,text)});
+ dict.onFinal(({text})=>{dBase=join(dBase,text);if(dTarget)dTarget.value=dBase});
+ dict.onState(({state})=>{if(state!=="listening"&&dTarget)endDict(true)})}
+else{document.body.classList.add("nomic");$("hint").textContent="Escribí una palabra en cualquiera de las tres lenguas."}
+if(!("speechSynthesis"in window))document.body.classList.add("nospeak");else speechSynthesis.getVoices();
+
+// Supabase: datos, acceso y personas
+const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20&&!SUPABASE_KEY.startsWith("PEG");
+async function loadAll(){const[a,b]=await Promise.all([sb.from("entradas").select("*").order("created_at",{ascending:false}),sb.from("voces").select("*")]);
+ if(a.error||b.error){amsg("No se pudieron cargar los datos guardados.");return}
+ added=a.data.map(v=>({id:String(v.id),ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true}));
+ const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;render()}
+async function loadMe(){ME=null;
+ if(session){const r=await sb.from("miembros").select("*").eq("email",(session.user.email||"").toLowerCase()).maybeSingle();
+  if(r.data)ME={nombre:str(r.data.nombre),lenguas:Array.isArray(r.data.lenguas)?r.data.lenguas:[],admin:!!r.data.admin}}
+ setWrite(!!ME);renderAcct();$("admin").hidden=!(ME&&ME.admin);if(ME&&ME.admin)loadPeople()}
+async function loadAjustes(){const r=await sb.from("ajustes").select("publico").eq("id",1).maybeSingle();PUBLICO=!(r.data&&r.data.publico===false);
+ document.querySelectorAll("[name=pub]").forEach(x=>x.checked=(x.value==="1")===PUBLICO);gate()}
+function gate(){document.body.classList.toggle("closed",!!sb&&!PUBLICO&&!ME)}
+function renderAcct(){const a=$("acct");a.textContent="";if(!sb)return;
+ if(session){const s=document.createElement("span");s.textContent=ME?ME.nombre:(session.user.email||"")+" · sin alta en el diccionario";const b=document.createElement("button");b.textContent="Salir";b.onclick=()=>sb.auth.signOut();a.append(s,b)}
+ else{const b=document.createElement("button");b.textContent="Entrar";b.onclick=openLogin;a.append(b)}}
+
+// login con contraseña
+let LM="in";
+function setLM(m){LM=m;document.querySelectorAll("[data-lm]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lm===m));
+ $("lhelp").textContent=m==="in"?"Entrá con tu email y tu contraseña.":"Si te dieron de alta en «Personas», elegí aquí tu contraseña (mínimo 6 caracteres).";
+ $("lsend").textContent=m==="in"?"Entrar":"Crear mi contraseña";$("lpass").autocomplete=m==="in"?"current-password":"new-password";$("lmsg").textContent=""}
+function openLogin(){$("ldlg").hidden=false;setLM("in");$("lmail").focus()}
+$("lseg").onclick=e=>{const b=e.target.closest("[data-lm]");if(b)setLM(b.dataset.lm)};
+$("lcancel").onclick=()=>$("ldlg").hidden=true;
+document.querySelectorAll("[data-login]").forEach(b=>b.onclick=openLogin);
+$("lform").onsubmit=async e=>{e.preventDefault();const email=$("lmail").value.trim().toLowerCase(),password=$("lpass").value;if(!email||!password)return;
+ $("lsend").disabled=true;$("lmsg").textContent=LM==="in"?"Entrando…":"Creando…";let m="";
+ try{if(LM==="in"){const r=await sb.auth.signInWithPassword({email,password});if(r.error)m="Email o contraseña incorrectos. ¿Es tu primera vez? Usá «Primera vez»."}
+  else{const inv=await sb.rpc("email_invitado",{e:email});
+   if(inv.error||!inv.data)m="Ese email no está dado de alta. Pedile a quien administra el diccionario que te añada en «Personas».";
+   else{const r=await sb.auth.signUp({email,password});
+    if(r.error)m=/registered|exists/i.test(r.error.message)?"Ese email ya tiene contraseña: usá «Ya tengo contraseña».":/password/i.test(r.error.message)?"La contraseña es demasiado corta o débil.":"No se pudo crear: "+r.error.message;
+    else if(!r.data.session)m="Cuenta creada, pero falta desactivar «Confirm email» en Supabase para entrar sin email."}}}
+ catch(err){m="No se pudo conectar. Probá otra vez."}
+ $("lsend").disabled=false;$("lmsg").textContent=m;if(!m)$("ldlg").hidden=true};
+
+// panel de personas (solo administradores)
+let PEOPLE=[];
+const LCK=(name,on,dis)=>LANGS.map(l=>`<label class="ckl"><input type="checkbox" name="${name}" value="${l.k}"${on.includes(l.k)?" checked":""}${dis?" disabled":""}> ${l.tag}</label>`).join("");
+async function loadPeople(){const r=await sb.from("miembros").select("*").order("nombre");if(r.error)return;PEOPLE=r.data;renderPeople()}
+function renderPeople(){const me=(session&&session.user.email||"").toLowerCase();
+ $("plist").innerHTML=PEOPLE.map(p=>{const self=p.email===me,L=Array.isArray(p.lenguas)?p.lenguas:[];return `<div class="prow" data-email="${esc(p.email)}" data-old="${esc(p.nombre)}">
+  <div class="pn"><input class="t" value="${esc(p.nombre)}" maxlength="30" aria-label="Nombre"><small>${esc(p.email)}${self?" · vos":""}</small></div>
+  <div class="ck"><span class="flab">Graba en</span>${LCK("l",L)}</div>
+  <label class="ckl adm"><input type="checkbox" name="adm"${p.admin?" checked":""}${self?" disabled":""}> Administra</label>
+  <div class="pact"><button type="button" class="btn ghost sm" data-psave>Guardar</button>${self?"":`<button type="button" class="del" data-pdel>Quitar</button>`}</div></div>`}).join("")||'<p class="msg">Todavía no hay nadie.</p>'}
+const pmsg=t=>$("pmsg").textContent=t;
+$("plist").onclick=async e=>{const row=e.target.closest(".prow");if(!row)return;const email=row.dataset.email,old=row.dataset.old;
+ if(e.target.closest("[data-psave]")){const nombre=row.querySelector(".pn input").value.trim(),lenguas=[...row.querySelectorAll("[name=l]:checked")].map(x=>x.value),adm=row.querySelector("[name=adm]");
+  if(!nombre)return pmsg("El nombre no puede quedar vacío.");
+  const r=await sb.from("miembros").update({nombre,lenguas,admin:adm.disabled?true:adm.checked}).eq("email",email);
+  if(r.error)return pmsg(/duplicate|unique/i.test(r.error.message)?"Ya hay otra persona con ese nombre.":"No se pudo guardar.");
+  if(nombre!==old)await sb.from("voces").update({persona:nombre}).eq("persona",old);
+  pmsg("Guardado.");await loadPeople();await loadMe();await loadAll()}
+ if(e.target.closest("[data-pdel]")){if(!window.confirm(`¿Quitar a ${old}? Ya no podrá entrar ni grabar. Sus grabaciones se mantienen.`))return;
+  const r=await sb.from("miembros").delete().eq("email",email);pmsg(r.error?"No se pudo quitar.":`${old} ya no tiene acceso.`);loadPeople()}};
+$("pform").onsubmit=async e=>{e.preventDefault();const nombre=$("p-nom").value.trim(),email=$("p-mail").value.trim().toLowerCase(),lenguas=[...$("pform").querySelectorAll("[name=nl]:checked")].map(x=>x.value),admin=$("p-adm").checked;
+ if(!nombre||!email)return;if(!lenguas.length)return pmsg("Elegí al menos una lengua para grabar.");
+ const r=await sb.from("miembros").insert({nombre,email,lenguas,admin});
+ if(r.error)return pmsg(/duplicate|unique/i.test(r.error.message)?"Ya existe una persona con ese nombre o ese email.":"No se pudo añadir.");
+ $("pform").reset();pmsg(`${nombre} añadida. Que entre en la app con «Entrar → Primera vez» y ese email.`);loadPeople()};
+document.querySelectorAll("[name=pub]").forEach(x=>x.onchange=async()=>{const pub=x.value==="1";const r=await sb.from("ajustes").update({publico:pub}).eq("id",1);
+ pmsg(r.error?"No se pudo cambiar el acceso.":pub?"Ahora la app es pública.":"Ahora la app es privada: solo entra la gente de la lista.");if(!r.error){PUBLICO=pub;gate()}});
 
 render();
-if(!("speechSynthesis"in window))document.body.classList.add("nospeak");
-const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
-use("dictation").then(d=>{dict=d;if(!d){document.body.classList.add("nomic");$("hint").textContent="Escribí una palabra en cualquiera de las tres lenguas.";return}
- d.onPartial(({text})=>{if(dTarget)dTarget.value=join(dBase,text)});
- d.onFinal(({text})=>{dBase=join(dBase,text);if(dTarget)dTarget.value=dBase});
- d.onState(({state})=>{if(state!=="listening"&&dTarget)endDict(true)})});
-use("tts").then(t=>{tts=t;if(t)document.body.classList.remove("nospeak")});
-use("db").then(async d=>{if(!d)return loadLocal();db=d;mode="db";
- const timer=setTimeout(()=>amsg("Todavía no se pudieron cargar las entradas añadidas."),10000);
- d.collection("entradas").onSnapshot(s=>{if(!s.metadata.fromCache){clearTimeout(timer);if($("amsg").textContent.startsWith("Todavía"))amsg("")}
-  added=s.docs.map(x=>{const v=x.data()||{};return{id:x.id,ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true,t:+v.t||0}}).sort((a,b)=>b.t-a.t);render()},
-  ()=>{clearTimeout(timer);amsg("Las entradas añadidas no están disponibles ahora.")});
- d.collection("voces").onSnapshot(s=>{const v={};s.docs.forEach(x=>{const o=x.data()||{};v[x.id]={lang:str(o.lang),word:str(o.word),t:+o.t||0}});VOC=v;render()},()=>{});
- const u=await use("user");if(u&&u.can){try{const c=await u.can("data.write");if(c===false){canWrite=false;lockForm();render()}}catch(e){}}});
+if(configured&&window.supabase){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);mode="db";$("lock").hidden=false;
+ sb.auth.onAuthStateChange((ev,s)=>{session=s;setTimeout(async()=>{await loadMe();await loadAjustes();await loadAll()},0)});
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadAll()})}
+else{ME={nombre:"Mi voz",lenguas:["ar","es","ca"],admin:false};loadLocal();if(!configured)console.info("Supabase sin configurar: modo local")}
 }
 </script>
 </body>
