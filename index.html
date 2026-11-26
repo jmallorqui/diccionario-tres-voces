@@ -101,6 +101,7 @@ body.nospeak .vb.std{display:none}body.nowrite .rec{display:none}
 .pact{display:flex;gap:10px;align-items:center}.btn.sm{padding:8px 14px;min-height:40px}
 .padd{margin-top:24px;border-top:2px solid var(--ink);padding-top:16px}.padd h3{font:700 22px/1.1 Newsreader,Georgia,serif;margin:0}
 @media(max-width:800px){.prow{grid-template-columns:minmax(0,1fr)}}
+.ed{color:var(--ink)}.mt{margin-top:10px}#edlg .box{max-height:92vh;overflow:auto}
 .box .msg{text-align:center;min-height:1.4em;margin:6px 0}
 .entry footer{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:8px;font-size:14px;color:var(--mute)}
 .cat{background:var(--panel);border-radius:6px;padding:2px 8px}
@@ -206,6 +207,22 @@ input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-hei
     </form>
   </div>
 </div>
+<div class="dlg" id="edlg" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="et">
+    <h3 id="et">Editar entrada</h3>
+    <p>Si cambiás una palabra que tiene voces grabadas, las grabaciones pasan a la palabra nueva.</p>
+    <form id="eform">
+      <label for="e-ar"><span class="d" style="background:var(--ar)"></span>Argentina</label><input class="t" id="e-ar">
+      <label for="e-es" class="mt"><span class="d" style="background:var(--es)"></span>España</label><input class="t" id="e-es">
+      <label for="e-ca" class="mt"><span class="d" style="background:var(--ca)"></span>Català</label><input class="t" id="e-ca">
+      <label for="e-cat" class="mt">Tema</label><input class="t" id="e-cat" list="catlist">
+      <label for="e-nota" class="mt">Nota</label><input class="t" id="e-nota">
+      <datalist id="catlist"></datalist>
+      <p class="msg" id="emsg" role="status"></p>
+      <div class="row end"><button type="button" class="btn ghost" id="ecancel">Cancelar</button><button class="btn" id="esave">Guardar cambios</button></div>
+    </form>
+  </div>
+</div>
 <div class="dlg" id="dlg" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="dt">
     <h3 id="dt"></h3>
@@ -247,7 +264,7 @@ const SEED=[
 ["dale","vale","d'acord (va)","Expresiones"],["¿qué onda?","¿qué tal?","què tal?","Expresiones"],["¡qué copado!","¡qué guay!","quina passada!","Expresiones"],["re (re lindo)","muy (muy bonito)","molt (molt bonic)","Expresiones"],["lindo","bonito (mono)","bonic (maco)","Expresiones"],["plata","dinero (pasta)","diners (calés)","Expresiones"],["laburo","curro","feina","Expresiones"],["quilombo","lío","embolic","Expresiones"],["fiaca","pereza","mandra","Expresiones"],["bronca","rabia","ràbia","Expresiones"],["pibe","chaval","noi (xaval)","Expresiones"],["nene / nena","niño / niña","nen / nena","Expresiones"],["pucho","cigarro (piti)","cigarreta","Expresiones"]
 ];
 const base=SEED.map((r,i)=>({id:"s"+i,ar:r[0],es:r[1],ca:r[2],cat:r[3],nota:r[4]||"",own:false}));
-let added=[],sb=null,session=null,ME=null,PUBLICO=true,dict=null,tts=null,canWrite=true,mode="mem";
+let added=[],SEEDED=false,sb=null,session=null,ME=null,PUBLICO=true,dict=null,tts=null,canWrite=true,mode="mem";
 const S={q:"",scope:"all",target:null,cat:"Todo",sort:"mine"};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -258,7 +275,8 @@ function lev(a,b){if(Math.abs(a.length-b.length)>1)return 9;const d=[...Array(b.
 function score(e,q){let best=0,hit=null;for(const l of LANGS){if(S.scope!=="all"&&S.scope!==l.k)continue;const f=norm(e[l.k]);if(!f)continue;const toks=f.split(" ");let s=0;
  if(f===q||toks.includes(q))s=4;else if(f.startsWith(q))s=3;else if(toks.some(t=>t.startsWith(q)))s=2.5;else if(f.includes(q))s=2;else if(q.length>=4&&(lev(f,q)<=1||toks.some(t=>t.length>=4&&lev(t,q)<=1)))s=1;
  if(s>best){best=s;hit=l.k}}return{s:best,hit}}
-const cats=()=>["Todo",...new Set([...base,...added].map(e=>e.cat))];
+const pool=()=>[...added,...(SEEDED?[]:base)];
+const cats=()=>["Todo",...new Set(pool().map(e=>e.cat))];
 
 // filtros
 $("scope").insertAdjacentHTML("beforeend",[["all","Las tres"],...LANGS.map(l=>[l.k,l.n])].map(([k,n])=>`<button class="chip" data-scope="${k}" aria-pressed="${k==="all"}">${n}</button>`).join(""));
@@ -274,8 +292,8 @@ function renderSort(){const ps=[...new Set(Object.values(VOC).flatMap(o=>Object.
 function card(e,hit){return `<article class="entry"><div class="trio">${LANGS.map(l=>{const w=e[l.k];if(!w)return `<div class="cell ${l.k}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">—</div></div>`;
  const k=akey(l.k,w),vs=VOC[k]||{},ew=esc(w),my=ME&&ME.nombre,names=Object.keys(vs).sort((a,b)=>(b===my)-(a===my)||a.localeCompare(b,"es"));
  const canRec=ME&&ME.lenguas.includes(l.k);
- return `<div class="cell ${l.k}${hit===l.k?" hit":""}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">${ew}</div><div class="vz">${names.map(n=>`<button class="vb mine" data-play="${esc(k)}" data-p="${esc(n)}" aria-label="Escuchar «${ew}» con la voz de ${esc(n)}">${SPK}<span>${esc(n)}</span></button>`).join("")}<button class="vb std" data-say="${ew}" data-l="${l.k}" aria-label="Escuchar «${ew}» con la voz Standard">${SPK}<span>Standard</span></button>${canRec?`<button class="rec" data-rec="${esc(k)}" data-w="${ew}" data-l="${l.k}">${vs[my]?"Cambiar mi voz":"Grabar mi voz"}</button>`:""}</div></div>`}).join("")}</div><footer><span class="cat">${esc(e.cat)}</span>${e.nota?`<span>${esc(e.nota)}</span>`:""}${e.own&&canWrite?`<button class="del" data-del="${esc(e.id)}">Eliminar</button>`:""}</footer></article>`}
-function render(){renderCats();const all=[...added,...base],q=norm(S.q);let rows;
+ return `<div class="cell ${l.k}${hit===l.k?" hit":""}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">${ew}</div><div class="vz">${names.map(n=>`<button class="vb mine" data-play="${esc(k)}" data-p="${esc(n)}" aria-label="Escuchar «${ew}» con la voz de ${esc(n)}">${SPK}<span>${esc(n)}</span></button>`).join("")}<button class="vb std" data-say="${ew}" data-l="${l.k}" aria-label="Escuchar «${ew}» con la voz Standard">${SPK}<span>Standard</span></button>${canRec?`<button class="rec" data-rec="${esc(k)}" data-w="${ew}" data-l="${l.k}">${vs[my]?"Cambiar mi voz":"Grabar mi voz"}</button>`:""}</div></div>`}).join("")}</div><footer><span class="cat">${esc(e.cat)}</span>${e.nota?`<span>${esc(e.nota)}</span>`:""}${e.own&&canWrite&&sb?`<button class="del ed" data-edit="${esc(e.id)}">Editar</button>`:""}${e.own&&canWrite?`<button class="del" data-del="${esc(e.id)}">Eliminar</button>`:""}</footer></article>`}
+function render(){renderCats();const all=pool(),q=norm(S.q);let rows;
  if(q){rows=all.map(e=>({e,...score(e,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s)}else rows=all.filter(e=>S.cat==="Todo"||e.cat===S.cat).map(e=>({e,hit:null}));
  renderSort();
  if(S.sort!=="std"){const rk=e=>LANGS.reduce((n,l)=>{const vs=e[l.k]&&VOC[akey(l.k,e[l.k])];return n+(vs&&(S.sort==="mine"?Object.keys(vs).length:vs[S.sort])?1:0)},0);
@@ -362,7 +380,7 @@ $("rsave").onclick=async()=>{if(!R.data)return;$("rsave").disabled=true;rmsg("Gu
    if(old&&old!==path)sb.storage.from("audios").remove([old]);delete ACACHE[k+"|"+p];await loadAll()}
   else{ACACHE[k+"|"+p]=R.data;VOC={...VOC,[k]:{...(VOC[k]||{}),[p]:{t:Date.now()}}};render();amsg("Voz guardada solo durante esta visita.")}
   closeRec()}
- catch(e){$("rsave").disabled=false;rmsg("No se pudo guardar. Probá otra vez.")}};
+ catch(e){$("rsave").disabled=false;rmsg("No se pudo guardar"+(e&&e.message?": "+e.message:". Probá otra vez."))}};
 $("rdel").onclick=async()=>{const k=R.k,p=R.p;$("rdel").disabled=true;
  try{if(sb){const old=VOC[k]&&VOC[k][p]&&VOC[k][p].archivo;const r=await sb.from("voces").delete().eq("clave",k).eq("persona",p);if(r.error)throw r.error;if(old)await sb.storage.from("audios").remove([old]);delete ACACHE[k+"|"+p];await loadAll()}
   else{delete ACACHE[k+"|"+p];const c={...(VOC[k]||{})};delete c[p];VOC={...VOC,[k]:c};render()}closeRec()}
@@ -372,7 +390,23 @@ $("res").onclick=e=>{const s=e.target.closest(".vb.std");if(s)return say(s);
  const p=e.target.closest("[data-play]");if(p)return playMine(p);
  const r=e.target.closest("[data-rec]");if(r)return openRec(r);
  const d=e.target.closest("[data-del]");if(d)return del(d.dataset.del);
+ const ed=e.target.closest("[data-edit]");if(ed)return openEdit(ed.dataset.edit);
  if(e.target.closest("[data-addq]")){const k=S.scope==="all"?"ar":S.scope;$("f-"+k).value=S.q;$("anadir").scrollIntoView({behavior:"smooth"});$("f-"+(k==="ar"?"es":"ar")).focus()}};
+
+// editar entradas
+let EID=null;
+function openEdit(id){const e=added.find(x=>x.id===id);if(!e)return;EID=id;["ar","es","ca","cat","nota"].forEach(f=>$("e-"+f).value=e[f]||"");
+ $("catlist").innerHTML=cats().slice(1).map(c=>`<option value="${esc(c)}">`).join("");$("emsg").textContent="";$("edlg").hidden=false;$("e-ar").focus()}
+$("ecancel").onclick=()=>$("edlg").hidden=true;$("edlg").onclick=e=>{if(e.target===$("edlg"))$("edlg").hidden=true};
+$("eform").onsubmit=async ev=>{ev.preventDefault();const e=added.find(x=>x.id===EID);if(!e)return;
+ const v={ar:$("e-ar").value.trim(),es:$("e-es").value.trim(),ca:$("e-ca").value.trim(),cat:$("e-cat").value.trim()||"Mis entradas",nota:$("e-nota").value.trim()};
+ if([v.ar,v.es,v.ca].filter(Boolean).length<2){$("emsg").textContent="Dejá al menos dos de las tres lenguas.";return}
+ $("esave").disabled=true;$("emsg").textContent="Guardando…";
+ try{const r=await sb.from("entradas").update(v).eq("id",EID);if(r.error)throw r.error;
+  for(const l of LANGS){const a=e[l.k],b=v[l.k];if(a&&b&&akey(l.k,a)!==akey(l.k,b)&&VOC[akey(l.k,a)])await sb.rpc("mover_voces",{vieja:akey(l.k,a),nueva:akey(l.k,b)})}
+  await loadAll();$("edlg").hidden=true}
+ catch(err){$("emsg").textContent="No se pudo guardar"+(err&&err.message?": "+err.message:".")}
+ $("esave").disabled=false};
 
 // entradas
 const LKEY="dic3-entradas";
@@ -382,14 +416,14 @@ const amsg=t=>$("amsg").textContent=t;
 $("aform").onsubmit=async e=>{e.preventDefault();if(dTarget)dict.stop().catch(()=>{});
  const v={ar:$("f-ar").value.trim(),es:$("f-es").value.trim(),ca:$("f-ca").value.trim(),cat:$("f-cat").value||"Mis entradas",nota:$("f-nota").value.trim()};
  if([v.ar,v.es,v.ca].filter(Boolean).length<2)return amsg("Completá al menos dos de las tres lenguas.");
- const dup=[...base,...added].find(x=>LANGS.every(l=>!v[l.k]||norm(x[l.k])===norm(v[l.k])));if(dup)return amsg("Esa entrada ya está en el diccionario.");
+ const dup=pool().find(x=>LANGS.every(l=>!v[l.k]||norm(x[l.k])===norm(v[l.k])));if(dup)return amsg("Esa entrada ya está en el diccionario.");
  $("save").disabled=true;
  try{if(sb){const r=await sb.from("entradas").insert(v);if(r.error)throw r.error;await loadAll()}else{added.unshift({id:"l"+Date.now(),...v,own:true});saveLocal();render()}
   ["f-ar","f-es","f-ca","f-nota"].forEach(id=>$(id).value="");amsg(mode==="mem"?"Guardada (solo durante esta visita).":"Guardada.");S.q=v.ar||v.es;$("q").value=S.q;S.target=null;render();
   setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),300)}
- catch(err){amsg("No se pudo guardar. Probá otra vez.")}
+ catch(err){amsg("No se pudo guardar"+(err&&err.message?": "+err.message:". Probá otra vez."))}
  $("save").disabled=!canWrite};
-async function del(id){try{if(sb){const r=await sb.from("entradas").delete().eq("id",id);if(r.error)throw r.error;await loadAll()}else{added=added.filter(x=>x.id!==id);saveLocal();render()}}catch(e){amsg("No se pudo eliminar.")}}
+async function del(id){const e=added.find(x=>x.id===id);if(!window.confirm(`¿Eliminar «${e?(e.ar||e.es||e.ca):"esta entrada"}» del diccionario?`))return;try{if(sb){const r=await sb.from("entradas").delete().eq("id",id);if(r.error)throw r.error;await loadAll()}else{added=added.filter(x=>x.id!==id);saveLocal();render()}}catch(e){amsg("No se pudo eliminar.")}}
 function setWrite(on){canWrite=on;document.body.classList.toggle("nowrite",!on);$("aform").querySelectorAll("input,select,button").forEach(x=>x.disabled=!on);$("lock").hidden=on||!sb;render()}
 
 // voz: reconocimiento del navegador
@@ -412,7 +446,8 @@ if(!("speechSynthesis"in window))document.body.classList.add("nospeak");else spe
 const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20&&!SUPABASE_KEY.startsWith("PEG");
 async function loadAll(){const[a,b]=await Promise.all([sb.from("entradas").select("*").order("created_at",{ascending:false}),sb.from("voces").select("*")]);
  if(a.error||b.error){amsg("No se pudieron cargar los datos guardados.");return}
- added=a.data.map(v=>({id:String(v.id),ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true}));
+ const rows=a.data.map(v=>({id:String(v.id),ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),semilla:str(v.semilla),own:true,t:Date.parse(v.created_at)||0}));
+ SEEDED=rows.some(r=>r.semilla);added=[...rows.filter(r=>!r.semilla).sort((x,y)=>y.t-x.t),...rows.filter(r=>r.semilla).sort((x,y)=>x.semilla.localeCompare(y.semilla))];
  const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;render()}
 async function loadMe(){ME=null;
  if(session){const r=await sb.from("miembros").select("*").eq("email",(session.user.email||"").toLowerCase()).maybeSingle();
