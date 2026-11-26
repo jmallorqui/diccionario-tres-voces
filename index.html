@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diccionario de tres voces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: cercano y claro, como un buen diccionario de bolsillo que además escucha y habla.
+   IDEA: la página de un diccionario trilingüe con pestañas de índice de color en el canto.
+   PICTURE: el buscador con micrófono y las entradas a tres columnas, cada lengua con su color.
+   COLOUR and TYPE: blanco + tinta profunda; celeste AR, rojo ES, amarillo senyera CA. Newsreader para lemas, Figtree para la interfaz.
+   LAYOUT: cabecera de tinta con buscador grande; debajo, filtros y entradas; al final, el formulario para añadir. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#10131a);--ink:light-dark(#141925,#eef1f6);--mute:light-dark(#5b6272,#a3abbb);--line:light-dark(#e3e6ec,#262b36);--panel:light-dark(#f4f6f9,#171b24);--head:light-dark(#141925,#0a0c11);--ar:light-dark(#2b7cc4,#7dbcf0);--es:light-dark(#c8102e,#ff6b7d);--ca:light-dark(#b88700,#f6c933);--arbg:light-dark(#e6f2fc,#13263a);--esbg:light-dark(#fde8eb,#3a141b);--cabg:light-dark(#fdf4d6,#332a0c)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1180px;margin:0 auto}
+header.band{background:var(--head);color:#f3f5f9;position:relative;overflow:hidden}
+.tabs{position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;width:clamp(10px,2vw,22px)}
+.tabs i{flex:1}.tabs i:nth-child(1){background:#74acdf}.tabs i:nth-child(2){background:#c8102e}.tabs i:nth-child(3){background:#f1bf00}
+h1{font:700 clamp(32px,5vw,50px)/1.05 Newsreader,Georgia,serif;margin:0 0 6px;text-wrap:balance}
+.sub{margin:0 0 24px;color:#b9c0cd;font-size:17px}
+.sub b{font-weight:500}.sub .a{color:#9ccbf2}.sub .e{color:#ff8a98}.sub .c{color:#f6cf4a}
+.search{display:flex;gap:10px;background:#fff;border-radius:14px;padding:8px;box-shadow:0 10px 30px #0006;max-width:860px}
+.search input{flex:1;border:0;outline:0;font:500 clamp(18px,2.4vw,22px) Figtree,sans-serif;padding:8px 10px;color:#141925;background:transparent}
+.search input::placeholder{color:#8a91a0}
+button{font:inherit;cursor:pointer}
+.mic{flex:none;width:52px;height:52px;border-radius:12px;border:0;background:#141925;color:#fff;display:grid;place-items:center}
+.mic.sm{width:44px;height:44px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.mic.on{background:#c8102e;color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px #c8102e33}}
+@media(prefers-reduced-motion:reduce){.mic.on{animation:none}}
+.mic svg,.spk svg{width:22px;height:22px}
+body.nomic .mic{display:none}
+.hint{margin:12px 0 0;color:#b9c0cd;font-size:15px;min-height:1.4em}
+.hint.live{color:#fff}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:18px}
+.bar .lbl{color:var(--mute);font-size:14px;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;min-height:40px;font-size:15px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.mic:focus-visible,.spk:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-visible{outline:3px solid var(--ar);outline-offset:2px}
+.count{color:var(--mute);font-size:14px;margin:0 0 10px}
+.target{display:inline-flex;gap:6px;align-items:center;background:var(--cabg);border-radius:999px;padding:4px 6px 4px 12px;font-size:14px;margin-left:8px}
+.target button{border:0;background:transparent;color:inherit;width:28px;height:28px;border-radius:50%}
+.entry{border-top:1px solid var(--line);padding:16px 0}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cell{position:relative;border-radius:12px;padding:10px 12px 10px 14px;border-left:4px solid transparent}
+.cell.ar{border-color:var(--ar)}.cell.es{border-color:var(--es)}.cell.ca{border-color:var(--ca)}
+.cell.hit.ar,.cell.tgt.ar{background:var(--arbg)}.cell.hit.es,.cell.tgt.es{background:var(--esbg)}.cell.hit.ca,.cell.tgt.ca{background:var(--cabg)}
+.cell.tgt{box-shadow:inset 0 0 0 2px currentColor}
+.cell.tgt.ar{color:var(--ar)}.cell.tgt.es{color:var(--es)}.cell.tgt.ca{color:var(--ca)}
+.tag{display:block;font-size:13px;color:var(--mute)}
+.w{font:700 22px/1.2 Newsreader,Georgia,serif;color:var(--ink);overflow-wrap:anywhere}
+.vz{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.vb,.rec{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px 4px 8px;min-height:36px;font-size:14px;font-weight:500;white-space:nowrap}
+.vb svg{width:18px;height:18px}
+.vb.mine{border-color:currentColor}.ar .vb.mine{color:var(--ar)}.es .vb.mine{color:var(--es)}.ca .vb.mine{color:var(--ca)}
+.vb.mine span{color:var(--ink)}
+.vb.on{background:var(--ink);color:var(--bg)}.vb.on span{color:var(--bg)}
+.rec{border-style:dashed;color:var(--mute);padding:4px 12px}
+.rec:hover,.vb:hover{border-color:var(--ink)}
+body.nospeak .vb.std{display:none}body.nowrite .rec{display:none}
+.dlg{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:16px;z-index:10}
+.dlg[hidden]{display:none}
+.box{background:var(--bg);color:var(--ink);border-radius:16px;padding:24px;width:min(480px,100%);box-shadow:0 20px 60px #0008}
+.box h3{font:700 26px/1.1 Newsreader,Georgia,serif;margin:0 0 4px}
+.box p{margin:0 0 16px;color:var(--mute)}
+.recbig{width:88px;height:88px;border-radius:50%;border:0;background:#c8102e;color:#fff;font-weight:700;display:grid;place-items:center;margin:4px auto 8px}
+.recbig.on{animation:pulse 1.2s infinite;border-radius:24px}
+.recbig[hidden]{display:none}
+.rt{text-align:center;font-variant-numeric:tabular-nums;color:var(--mute);min-height:1.5em}
+.ups{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
+.up{position:relative;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;margin:0;font-weight:500}
+.up input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn[hidden]{display:none}
+.end{justify-content:flex-end;margin-top:14px}
+.box .msg{text-align:center;min-height:1.4em;margin:6px 0}
+.entry footer{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:8px;font-size:14px;color:var(--mute)}
+.cat{background:var(--panel);border-radius:6px;padding:2px 8px}
+.del{border:0;background:transparent;color:var(--es);text-decoration:underline;padding:6px 0;min-height:32px}
+.empty{padding:28px 0;color:var(--mute)}
+.empty .btn{margin-top:10px}
+.add{background:var(--panel)}
+h2{font:700 32px/1.05 Newsreader,Georgia,serif;margin:0 0 6px}
+.add p{margin:0 0 20px;color:var(--mute);max-width:65ch}
+form{display:grid;gap:14px;max-width:860px}
+.f3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+label{display:block;font-size:14px;font-weight:500;margin-bottom:6px}
+label .d{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.fld{display:flex;gap:6px}
+input.t,select{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn{border:0;border-radius:10px;background:var(--ink);color:var(--bg);padding:12px 20px;min-height:44px;font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.msg{font-size:15px;color:var(--mute)}
+.note{font-size:13px;color:var(--mute);margin-top:22px}
+@media(max-width:700px){.trio,.f3{grid-template-columns:minmax(0,1fr)}.trio{gap:6px}}
+</style>
+</head>
+<body>
+<header class="band">
+  <div class="tabs" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <h1>Diccionario de tres voces</h1>
+    <p class="sub"><b class="a">Castellano argentino</b> · <b class="e">castellano de España</b> · <b class="c">català</b></p>
+    <form class="search" id="sform" role="search">
+      <input id="q" type="search" autocomplete="off" placeholder="Escribí o decí una palabra… frutilla, coche, maduixa" aria-label="Buscar palabra">
+      <button type="button" class="mic" id="qmic" aria-label="Buscar por voz"></button>
+    </form>
+    <p class="hint" id="hint">Probá decir: «¿Cómo se dice frutilla en catalán?»</p>
+  </div>
+</header>
+
+<main class="band">
+  <div class="wrap">
+    <div class="bar" id="scope"><span class="lbl">Buscar en</span></div>
+    <div class="bar" id="cats"></div>
+    <div class="bar" id="sort"><span class="lbl">Ordenar</span><button class="chip" data-sort="mine" aria-pressed="true">Grabadas por nosotros primero</button><button class="chip" data-sort="Jorgelina" aria-pressed="false">Jorgelina primero</button><button class="chip" data-sort="Jordi" aria-pressed="false">Jordi primero</button><button class="chip" data-sort="std" aria-pressed="false">Orden del diccionario</button></div>
+    <p class="count" id="count"></p>
+    <div id="res"></div>
+  </div>
+</main>
+
+<section class="band add" id="anadir">
+  <div class="wrap">
+    <h2>Añadir una entrada</h2>
+    <p>Completá al menos dos lenguas. Cada campo tiene su micrófono: tocá, hablá y volvé a tocar para terminar.</p>
+    <form id="aform">
+      <div class="f3">
+        <div><label for="f-ar"><span class="d" style="background:var(--ar)"></span>Argentina</label><div class="fld"><input class="t" id="f-ar" placeholder="ej. pochoclo"><button type="button" class="mic sm" data-for="f-ar" aria-label="Dictar palabra argentina"></button></div></div>
+        <div><label for="f-es"><span class="d" style="background:var(--es)"></span>España</label><div class="fld"><input class="t" id="f-es" placeholder="ej. palomitas"><button type="button" class="mic sm" data-for="f-es" aria-label="Dictar palabra de España"></button></div></div>
+        <div><label for="f-ca"><span class="d" style="background:var(--ca)"></span>Català</label><div class="fld"><input class="t" id="f-ca" placeholder="ej. crispetes"><button type="button" class="mic sm" data-for="f-ca" aria-label="Dictar palabra en catalán"></button></div></div>
+      </div>
+      <div class="f3">
+        <div><label for="f-cat">Tema</label><select id="f-cat"></select></div>
+        <div style="grid-column:span 2"><label for="f-nota">Nota (opcional)</label><div class="fld"><input class="t" id="f-nota" placeholder="uso, registro, ejemplo…"><button type="button" class="mic sm" data-for="f-nota" aria-label="Dictar nota"></button></div></div>
+      </div>
+      <div class="row"><button class="btn" type="submit" id="save">Guardar entrada</button><span class="msg" id="amsg" role="status"></span></div>
+    </form>
+    <p class="note">Incluye unas 80 entradas de partida con las diferencias más habituales; las que añadas se suman a ellas. Cada palabra suena con la voz Standard hasta que grabás la de Jorgelina (Argentina) o la de Jordi (España y català): tocá «Grabar» junto al altavoz.</p>
+  </div>
+</section>
+
+<div class="dlg" id="dlg" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="dt">
+    <h3 id="dt"></h3>
+    <p id="dsub"></p>
+    <button type="button" class="recbig" id="rbtn" aria-label="Empezar a grabar">Grabar</button>
+    <div class="rt" id="rtime"></div>
+    <div class="ups">
+      <label class="up">Grabar con el móvil<input type="file" id="rcap" accept="audio/*" capture></label>
+      <label class="up">Subir archivo de audio<input type="file" id="rfile" accept="audio/*,video/*"></label>
+    </div>
+    <p class="msg" id="rmsg" role="status"></p>
+    <div class="row end">
+      <button type="button" class="btn ghost" id="rplay" hidden>▶ Escuchar</button>
+      <button type="button" class="btn ghost" id="rdel" hidden>Volver a Standard</button>
+      <button type="button" class="btn ghost" id="rcancel">Cancelar</button>
+      <button type="button" class="btn" id="rsave" disabled>Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+{
+const MIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const LANGS=[{k:"ar",n:"Argentina",tag:"AR",tts:"es-AR",voice:"Jorgelina"},{k:"es",n:"España",tag:"ES",tts:"es-ES",voice:"Jordi"},{k:"ca",n:"Català",tag:"CA",tts:"ca-ES",voice:"Jordi"}];
+let VOC={};const ACACHE={};
+const SEED=[
+["colectivo","autobús","autobús","Transporte"],["auto","coche","cotxe","Transporte"],["subte","metro","metro","Transporte"],["manejar","conducir","conduir","Transporte"],["estacionar","aparcar","aparcar","Transporte"],["boleto","billete","bitllet","Transporte"],["nafta","gasolina","gasolina","Transporte"],["ruta","carretera","carretera","Transporte"],["vereda","acera","vorera","Transporte"],["cuadra","manzana (calle)","illa de cases","Transporte","En Argentina se cuentan las distancias por cuadras."],["tomar el colectivo","coger el autobús","agafar l'autobús","Transporte"],
+["frutilla","fresa","maduixa","Comida"],["durazno","melocotón","préssec","Comida"],["palta","aguacate","alvocat","Comida"],["choclo","mazorca de maíz","panotxa (blat de moro)","Comida"],["arvejas","guisantes","pèsols","Comida"],["porotos","judías (alubias)","mongetes","Comida"],["chauchas","judías verdes","mongetes tendres","Comida"],["papa","patata","patata","Comida"],["batata","boniato","moniato","Comida"],["zapallo","calabaza","carbassa","Comida"],["zapallito","calabacín","carbassó","Comida"],["ananá","piña","pinya","Comida"],["banana","plátano","plàtan","Comida"],["pomelo","pomelo","aranja","Comida"],["manteca","mantequilla","mantega","Comida"],["crema de leche","nata","nata","Comida"],["panceta","beicon (panceta)","cansalada (bacó)","Comida"],["pochoclo","palomitas","crispetes","Comida"],["jugo","zumo","suc","Comida"],["torta","tarta","pastís","Comida"],["facturas","bollería","brioixeria","Comida"],["frutillas con crema","fresas con nata","maduixes amb nata","Comida"],
+["remera","camiseta","samarreta","Ropa"],["pollera","falda","faldilla","Ropa"],["campera","chaqueta (cazadora)","jaqueta","Ropa"],["buzo","sudadera","dessuadora","Ropa"],["zapatillas","zapatillas (deportivas)","vambes","Ropa"],["medias","calcetines","mitjons","Ropa"],["malla","bañador","banyador","Ropa"],["corpiño","sujetador","sostenidors","Ropa"],["anteojos","gafas","ulleres","Ropa"],
+["heladera","nevera (frigorífico)","nevera","Casa"],["canilla","grifo","aixeta","Casa"],["placard","armario","armari","Casa"],["departamento","piso","pis","Casa"],["living","salón","sala d'estar","Casa"],["pileta","piscina","piscina","Casa"],["pava","hervidor","bullidor","Casa","En Argentina, la pava es la del mate."],["mamadera","biberón","biberó","Casa"],["curita","tirita","tireta","Casa"],["valija","maleta","maleta","Casa"],["encendedor","mechero","encenedor","Casa"],
+["celular","móvil","mòbil","Objetos"],["computadora","ordenador","ordinador","Objetos"],["birome","bolígrafo (boli)","bolígraf","Objetos"],["estampilla","sello","segell","Objetos"],["boliche","discoteca","discoteca","Objetos","Boliche también puede ser un bar pequeño."],
+["agarrar","coger","agafar","Verbos","Ojo: en Argentina «coger» es vulgar."],["enojarse","enfadarse","enfadar-se","Verbos"],["extrañar","echar de menos","trobar a faltar","Verbos"],["apurarse","darse prisa","afanyar-se","Verbos"],["pararse","ponerse de pie","aixecar-se","Verbos"],["laburar","currar","treballar","Verbos","Registro informal en AR y ES."],
+["vos sos","tú eres","tu ets","Gramática"],["ustedes son","vosotros sois","vosaltres sou","Gramática"],["¿vos querés?","¿tú quieres?","tu vols?","Gramática"],
+["dale","vale","d'acord (va)","Expresiones"],["¿qué onda?","¿qué tal?","què tal?","Expresiones"],["¡qué copado!","¡qué guay!","quina passada!","Expresiones"],["re (re lindo)","muy (muy bonito)","molt (molt bonic)","Expresiones"],["lindo","bonito (mono)","bonic (maco)","Expresiones"],["plata","dinero (pasta)","diners (calés)","Expresiones"],["laburo","curro","feina","Expresiones"],["quilombo","lío","embolic","Expresiones"],["fiaca","pereza","mandra","Expresiones"],["bronca","rabia","ràbia","Expresiones"],["pibe","chaval","noi (xaval)","Expresiones"],["nene / nena","niño / niña","nen / nena","Expresiones"],["pucho","cigarro (piti)","cigarreta","Expresiones"]
+];
+const base=SEED.map((r,i)=>({id:"s"+i,ar:r[0],es:r[1],ca:r[2],cat:r[3],nota:r[4]||"",own:false}));
+let added=[],db=null,dict=null,tts=null,canWrite=true,mode="mem";
+const S={q:"",scope:"all",target:null,cat:"Todo",sort:"mine"};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const str=v=>typeof v==="string"?v.slice(0,120):"";
+const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+const akey=(l,w)=>l+"~"+((norm(w).replace(/ /g,"-"))||"x").slice(0,150);
+function lev(a,b){if(Math.abs(a.length-b.length)>1)return 9;const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return d[b.length]}
+function score(e,q){let best=0,hit=null;for(const l of LANGS){if(S.scope!=="all"&&S.scope!==l.k)continue;const f=norm(e[l.k]);if(!f)continue;const toks=f.split(" ");let s=0;
+ if(f===q||toks.includes(q))s=4;else if(f.startsWith(q))s=3;else if(toks.some(t=>t.startsWith(q)))s=2.5;else if(f.includes(q))s=2;else if(q.length>=4&&(lev(f,q)<=1||toks.some(t=>t.length>=4&&lev(t,q)<=1)))s=1;
+ if(s>best){best=s;hit=l.k}}return{s:best,hit}}
+const cats=()=>["Todo",...new Set([...base,...added].map(e=>e.cat))];
+
+// filtros
+$("scope").insertAdjacentHTML("beforeend",[["all","Las tres"],...LANGS.map(l=>[l.k,l.n])].map(([k,n])=>`<button class="chip" data-scope="${k}" aria-pressed="${k==="all"}">${n}</button>`).join(""));
+$("scope").onclick=e=>{const b=e.target.closest("[data-scope]");if(!b)return;S.scope=b.dataset.scope;$("scope").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render()};
+$("sort").onclick=e=>{const b=e.target.closest("[data-sort]");if(!b)return;S.sort=b.dataset.sort;$("sort").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render()};
+$("cats").onclick=e=>{const b=e.target.closest("[data-cat]");if(!b)return;S.cat=b.dataset.cat;S.q="";$("q").value="";render()};
+function renderCats(){$("cats").innerHTML='<span class="lbl">Temas</span>'+cats().map(c=>`<button class="chip" data-cat="${esc(c)}" aria-pressed="${!S.q&&S.cat===c}">${esc(c)}</button>`).join("");
+ const sel=$("f-cat"),cur=sel.value;sel.innerHTML=[...new Set([...cats().slice(1),"Mis entradas"])].map(c=>`<option>${esc(c)}</option>`).join("");sel.value=cur||"Mis entradas"}
+
+function card(e,hit){return `<article class="entry"><div class="trio">${LANGS.map(l=>{const w=e[l.k];if(!w)return `<div class="cell ${l.k}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">—</div></div>`;
+ const k=akey(l.k,w),mine=VOC[k],ew=esc(w);
+ return `<div class="cell ${l.k}${hit===l.k?" hit":""}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span><div class="w">${ew}</div><div class="vz">${mine?`<button class="vb mine" data-play="${esc(k)}" aria-label="Escuchar «${ew}» con la voz de ${l.voice}">${SPK}<span>${l.voice}</span></button>`:""}<button class="vb std" data-say="${ew}" data-l="${l.k}" aria-label="Escuchar «${ew}» con la voz Standard">${SPK}<span>Standard</span></button><button class="rec" data-rec="${esc(k)}" data-w="${ew}" data-l="${l.k}">${mine?"Cambiar":"Grabar"} ${l.voice}</button></div></div>`}).join("")}</div><footer><span class="cat">${esc(e.cat)}</span>${e.nota?`<span>${esc(e.nota)}</span>`:""}${e.own&&canWrite?`<button class="del" data-del="${esc(e.id)}">Eliminar</button>`:""}</footer></article>`}
+function render(){renderCats();const all=[...added,...base],q=norm(S.q);let rows;
+ if(q){rows=all.map(e=>({e,...score(e,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s)}else rows=all.filter(e=>S.cat==="Todo"||e.cat===S.cat).map(e=>({e,hit:null}));
+ if(S.sort!=="std"){const rk=e=>LANGS.reduce((n,l)=>n+(e[l.k]&&VOC[akey(l.k,e[l.k])]&&(S.sort==="mine"||l.voice===S.sort)?1:0),0);
+  rows=rows.map((r,i)=>({...r,i,m:rk(r.e)})).sort((a,b)=>(b.m>0)-(a.m>0)||b.m-a.m||a.i-b.i)}
+ const nm=rows.filter(r=>r.m>0).length;
+ const tl=S.target&&LANGS.find(l=>l.k===S.target);
+ $("count").innerHTML=(q?`${rows.length} resultado${rows.length===1?"":"s"} para «${esc(S.q)}»`:`${rows.length} entradas · ${esc(S.cat)}`)+(S.sort!=="std"?` · ${nm} con voz ${S.sort==="mine"?"grabada":"de "+S.sort}`:"")+(tl?`<span class="target">Traducir a ${tl.n}<button data-untarget aria-label="Quitar destino">✕</button></span>`:"");
+ $("res").innerHTML=rows.length?rows.map(r=>card(r.e,r.hit)).join(""):`<div class="empty">No encontré «${esc(S.q)}» en el diccionario.<br><button class="btn" data-addq>Añadirla como entrada nueva</button></div>`}
+$("count").onclick=e=>{if(e.target.closest("[data-untarget]")){S.target=null;render()}};
+$("q").addEventListener("input",()=>{S.q=$("q").value;if(!S.q)S.target=null;render()});
+$("sform").onsubmit=e=>{e.preventDefault();runVoiceLike($("q").value)};
+
+// interpreta frases como «cómo se dice frutilla en catalán»
+function runVoiceLike(t){let s=norm(t),target=null;
+ const tg=[["ca",/\b(en )?(catalan|catala)\b/],["es",/\b(en )?(espana|espanol de espana|castellano de espana|peninsular)\b/],["ar",/\b(en )?(argentina|argentino|castellano argentino)\b/]];
+ for(const[k,re]of tg)if(re.test(s)){target=k;s=s.replace(re," ")}
+ s=s.replace(/\b(como se dice|como se llama|como dicen|que significa|que quiere decir|traduceme|traducime|traduce|traduci|traducir|la palabra)\b/g," ").replace(/\b(en|de)\s*$/," ").trim().replace(/^(el|la|los|las|un|una)\s+/,"").trim();
+ const orig=t.trim();S.target=target;S.q=(target||s!==norm(orig))?s:orig;$("q").value=S.q;render()}
+
+// voz: dictado
+let dTarget=null,dBase="",dBtn=null;
+document.querySelectorAll(".mic").forEach(b=>b.innerHTML=MIC);
+const join=(a,b)=>(a&&b?a.trim()+" "+b.trim():(a||"")+(b||"")).trim();
+function micClick(btn,input){if(!dict){$("hint").textContent="El dictado por voz no está disponible en este navegador; podés escribir.";return}
+ if(dTarget){dict.stop().catch(()=>{});return}
+ dTarget=input;dBtn=btn;dBase=input.id==="q"?"":input.value;if(input.id==="q")input.value="";btn.classList.add("on");
+ if(input.id==="q"){$("hint").textContent="Te escucho… tocá el micrófono de nuevo para terminar.";$("hint").classList.add("live")}
+ dict.start().catch(e=>{endDict(false);$("hint").textContent=e&&e.code==="not_granted"?"Sin permiso para el micrófono: podés escribir.":"No se pudo empezar a escuchar. Probá otra vez."})}
+function endDict(run=true){const t=dTarget;dTarget=null;if(dBtn)dBtn.classList.remove("on");dBtn=null;$("hint").classList.remove("live");
+ if(!t)return;if(t.id==="q"){$("hint").textContent="Probá decir: «¿Cómo se dice frutilla en catalán?»";if(run&&t.value.trim())runVoiceLike(t.value)}}
+$("qmic").onclick=()=>micClick($("qmic"),$("q"));
+document.querySelectorAll(".mic.sm").forEach(b=>b.onclick=()=>micClick(b,$(b.dataset.for)));
+
+// voz: pronunciación
+async function say(btn){const w=btn.dataset.say.replace(/\(.*?\)/g,"").replace(/\s*\/\s*/g,", ").trim(),l=LANGS.find(x=>x.k===btn.dataset.l);
+ stopAll();btn.classList.add("on");
+ try{if(tts)await tts.speak(w,{language:l.tts});else await local(w,l.tts)}catch(e){if(tts&&e&&e.code==="not_granted")tts=null;try{await local(w,l.tts)}catch(_){}}
+ btn.classList.remove("on")}
+function local(w,lang){return new Promise((ok,ko)=>{if(!("speechSynthesis"in window))return ko();const u=new SpeechSynthesisUtterance(w);u.lang=lang;const v=speechSynthesis.getVoices().find(v=>v.lang.replace("_","-").startsWith(lang))||speechSynthesis.getVoices().find(v=>v.lang.startsWith(lang.slice(0,2)));if(v)u.voice=v;u.onend=ok;u.onerror=ko;speechSynthesis.cancel();speechSynthesis.speak(u)})}
+
+// voces grabadas (Jorgelina / Jordi)
+let player=null;
+function stopAll(){document.querySelectorAll(".vb.on").forEach(x=>x.classList.remove("on"));if(player){player.pause();player=null}try{tts&&tts.stop()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
+async function getAudio(k){if(ACACHE[k])return ACACHE[k];if(!db)return null;const s=await db.doc("audiodata/"+k).get();const u=s.exists&&s.data().wav;if(typeof u==="string"&&u.startsWith("data:audio/wav;base64,")){ACACHE[k]=u;return u}return null}
+async function playMine(btn){const k=btn.dataset.play;stopAll();btn.classList.add("on");
+ try{const u=await getAudio(k);if(!u)throw 0;const a=new Audio(u);player=a;a.onended=a.onerror=()=>btn.classList.remove("on");await a.play()}
+ catch(e){btn.classList.remove("on");amsg("No se pudo reproducir esa grabación.")}}
+
+const R={k:null,l:null,w:"",data:null,mr:null,timer:null};
+const rmsg=t=>$("rmsg").textContent=t;
+function openRec(b){const l=LANGS.find(x=>x.k===b.dataset.l);Object.assign(R,{k:b.dataset.rec,l,w:b.dataset.w,data:null});
+ $("dt").textContent=`Voz de ${l.voice}: «${R.w}»`;$("dsub").textContent=`${l.n}. Grabá la palabra (hasta 4 segundos). Se recorta el silencio y se guarda en lugar de Standard.`;
+ $("rbtn").hidden=!(navigator.mediaDevices&&window.MediaRecorder);$("rbtn").textContent="Grabar";$("rbtn").classList.remove("on");
+ $("rtime").textContent="";rmsg("");$("rplay").hidden=true;$("rsave").disabled=true;$("rsave").textContent=`Guardar voz de ${l.voice}`;$("rdel").hidden=!VOC[R.k];
+ $("dlg").hidden=false;$("rcancel").focus()}
+function closeRec(){if(R.mr&&R.mr.state==="recording"){R.mr.onstop=null;R.mr.stop()}clearInterval(R.timer);if(player){player.pause();player=null}$("dlg").hidden=true}
+$("rcancel").onclick=closeRec;$("dlg").onclick=e=>{if(e.target===$("dlg"))closeRec()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("dlg").hidden)closeRec()});
+$("rbtn").onclick=async()=>{if(R.mr&&R.mr.state==="recording"){R.mr.stop();return}
+ let st;try{st=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){$("rbtn").hidden=true;rmsg("Aquí el navegador no deja usar el micrófono. Usá «Grabar con el móvil» o subí un archivo.");return}
+ const ch=[];const mr=new MediaRecorder(st);R.mr=mr;mr.ondataavailable=e=>e.data.size&&ch.push(e.data);
+ mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());clearInterval(R.timer);$("rbtn").classList.remove("on");$("rbtn").textContent="Otra vez";prep(new Blob(ch,{type:mr.mimeType||"audio/webm"}))};
+ mr.start();const t0=Date.now();$("rbtn").classList.add("on");$("rbtn").textContent="Parar";rmsg("Grabando… decí la palabra.");
+ R.timer=setInterval(()=>{const s=(Date.now()-t0)/1000;$("rtime").textContent=s.toFixed(1)+" s";if(s>=5&&mr.state==="recording")mr.stop()},100)};
+["rcap","rfile"].forEach(id=>$(id).onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(f)prep(f)});
+async function prep(blob){rmsg("Procesando audio…");$("rsave").disabled=true;
+ try{if(blob.size>30*1024*1024)throw new Error("grande");const AC=window.AudioContext||window.webkitAudioContext;const ac=new AC();let ab;try{ab=await ac.decodeAudioData(await blob.arrayBuffer())}finally{try{ac.close()}catch(e){}}
+  R.data=await toWav(ab);$("rtime").textContent=R.dur.toFixed(1)+" s";$("rplay").hidden=false;$("rsave").disabled=!canWrite;rmsg(canWrite?"Escuchala y, si te gusta, guardala.":"No tenés permiso para guardar voces aquí.")}
+ catch(e){R.data=null;rmsg("No pude leer ese audio. Probá con otro archivo (m4a, mp3, wav, ogg…).")}}
+async function toWav(ab){const n=ab.length,c=ab.numberOfChannels,m=new Float32Array(n);for(let i=0;i<c;i++){const d=ab.getChannelData(i);for(let j=0;j<n;j++)m[j]+=d[j]/c}
+ let pk=0;for(let j=0;j<n;j++)pk=Math.max(pk,Math.abs(m[j]));if(pk<0.005)throw new Error("silencio");
+ const th=pk*0.06,pad=Math.round(ab.sampleRate*0.12);let a=0,b=n-1;while(a<n&&Math.abs(m[a])<th)a++;while(b>a&&Math.abs(m[b])<th)b--;a=Math.max(0,a-pad);b=Math.min(n-1,b+pad);
+ const SR=16000,ratio=ab.sampleRate/SR,len=Math.min(Math.floor((b-a)/ratio),SR*4.5),g=0.9/pk;R.dur=len/SR;
+ const buf=new ArrayBuffer(44+len*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+ w(0,"RIFF");v.setUint32(4,36+len*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,len*2,true);
+ for(let i=0;i<len;i++){const p=a+i*ratio,i0=Math.floor(p),f=p-i0,x=(m[i0]*(1-f)+(m[Math.min(i0+1,n-1)]||0)*f)*g;v.setInt16(44+i*2,Math.max(-1,Math.min(1,x))*32767,true)}
+ return await new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ko;r.readAsDataURL(new Blob([buf],{type:"audio/wav"}))})}
+$("rplay").onclick=()=>{if(!R.data)return;if(player)player.pause();player=new Audio(R.data);player.play().catch(()=>{})};
+$("rsave").onclick=async()=>{if(!R.data)return;$("rsave").disabled=true;rmsg("Guardando…");const k=R.k,meta={lang:R.l.k,word:R.w,t:Date.now()};
+ try{if(db){await db.doc("audiodata/"+k).set({wav:R.data});await db.doc("voces/"+k).set(meta)}ACACHE[k]=R.data;VOC={...VOC,[k]:meta};render();
+  if(!db)amsg("Voz guardada solo durante esta visita.");closeRec()}
+ catch(e){$("rsave").disabled=false;rmsg(e&&e.code==="quota_exceeded"?"No queda espacio para más grabaciones.":e&&e.code==="invalid_argument"?"No tenés permiso para guardar voces aquí.":"No se pudo guardar. Probá otra vez.")}};
+$("rdel").onclick=async()=>{const k=R.k;$("rdel").disabled=true;
+ try{if(db){await db.doc("voces/"+k).delete();await db.doc("audiodata/"+k).delete()}delete ACACHE[k];const c={...VOC};delete c[k];VOC=c;render();closeRec()}
+ catch(e){rmsg("No se pudo quitar la grabación.")}$("rdel").disabled=false};
+
+$("res").onclick=e=>{const s=e.target.closest(".vb.std");if(s)return say(s);
+ const p=e.target.closest("[data-play]");if(p)return playMine(p);
+ const r=e.target.closest("[data-rec]");if(r)return openRec(r);
+ const d=e.target.closest("[data-del]");if(d)return del(d.dataset.del);
+ if(e.target.closest("[data-addq]")){const k=S.scope==="all"?(S.target?"ar":"ar"):S.scope;$("f-"+k).value=S.q;$("anadir").scrollIntoView({behavior:"smooth"});$("f-"+(k==="ar"?"es":"ar")).focus()}};
+
+// guardar entradas
+const LKEY="dic3-entradas";
+function loadLocal(){mode="local";try{const a=JSON.parse(localStorage.getItem(LKEY)||"[]");added=a.map(v=>({id:str(v.id),ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true}))}catch(e){mode="mem"}render()}
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(added))}catch(e){mode="mem"}}
+const amsg=t=>$("amsg").textContent=t;
+$("aform").onsubmit=async e=>{e.preventDefault();if(dTarget)dict.stop().catch(()=>{});
+ const v={ar:$("f-ar").value.trim(),es:$("f-es").value.trim(),ca:$("f-ca").value.trim(),cat:$("f-cat").value||"Mis entradas",nota:$("f-nota").value.trim()};
+ if([v.ar,v.es,v.ca].filter(Boolean).length<2)return amsg("Completá al menos dos de las tres lenguas.");
+ const dup=[...base,...added].find(x=>LANGS.every(l=>!v[l.k]||norm(x[l.k])===norm(v[l.k])));if(dup)return amsg("Esa entrada ya está en el diccionario.");
+ $("save").disabled=true;
+ try{if(db){await db.collection("entradas").add({...v,t:Date.now()})}else{added.unshift({id:"l"+Date.now(),...v,own:true});saveLocal();render()}
+  ["f-ar","f-es","f-ca","f-nota"].forEach(id=>$(id).value="");amsg(mode==="mem"?"Guardada (solo durante esta visita).":"Guardada.");S.q=v.ar||v.es;$("q").value=S.q;S.target=null;render();
+  setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),300)}
+ catch(err){amsg(err&&err.code==="quota_exceeded"?"El diccionario está lleno: eliminá alguna entrada.":err&&err.code==="invalid_argument"?"No tenés permiso para añadir entradas aquí.":"No se pudo guardar. Probá otra vez.");if(err&&err.code==="invalid_argument"){canWrite=false;lockForm()}}
+ $("save").disabled=!canWrite};
+async function del(id){try{if(db)await db.collection("entradas").doc(id).delete();else{added=added.filter(x=>x.id!==id);saveLocal();render()}}catch(e){amsg("No se pudo eliminar.")}}
+function lockForm(){document.body.classList.add("nowrite");$("aform").querySelectorAll("input,select,button").forEach(x=>x.disabled=true);amsg("Podés consultar el diccionario, pero no añadir entradas.")}
+
+render();
+if(!("speechSynthesis"in window))document.body.classList.add("nospeak");
+const use=n=>window.claude&&window.claude.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
+use("dictation").then(d=>{dict=d;if(!d){document.body.classList.add("nomic");$("hint").textContent="Escribí una palabra en cualquiera de las tres lenguas.";return}
+ d.onPartial(({text})=>{if(dTarget)dTarget.value=join(dBase,text)});
+ d.onFinal(({text})=>{dBase=join(dBase,text);if(dTarget)dTarget.value=dBase});
+ d.onState(({state})=>{if(state!=="listening"&&dTarget)endDict(true)})});
+use("tts").then(t=>{tts=t;if(t)document.body.classList.remove("nospeak")});
+use("db").then(async d=>{if(!d)return loadLocal();db=d;mode="db";
+ const timer=setTimeout(()=>amsg("Todavía no se pudieron cargar las entradas añadidas."),10000);
+ d.collection("entradas").onSnapshot(s=>{if(!s.metadata.fromCache){clearTimeout(timer);if($("amsg").textContent.startsWith("Todavía"))amsg("")}
+  added=s.docs.map(x=>{const v=x.data()||{};return{id:x.id,ar:str(v.ar),es:str(v.es),ca:str(v.ca),cat:str(v.cat)||"Mis entradas",nota:str(v.nota),own:true,t:+v.t||0}}).sort((a,b)=>b.t-a.t);render()},
+  ()=>{clearTimeout(timer);amsg("Las entradas añadidas no están disponibles ahora.")});
+ d.collection("voces").onSnapshot(s=>{const v={};s.docs.forEach(x=>{const o=x.data()||{};v[x.id]={lang:str(o.lang),word:str(o.word),t:+o.t||0}});VOC=v;render()},()=>{});
+ const u=await use("user");if(u&&u.can){try{const c=await u.can("data.write");if(c===false){canWrite=false;lockForm();render()}}catch(e){}}});
+}
+</script>
+</body>
+</html>
