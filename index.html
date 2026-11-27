@@ -118,6 +118,13 @@ body.nospeak .vb.std{display:none}
 .sq.hasc .corner.es,.sq.hasc .corner.en{padding-left:clamp(90px,16vw,175px)}
 .fnota{color:var(--mute);margin:16px 0 0}
 .fcred{font-size:12px;color:var(--mute);margin:10px 0 0;text-align:center}.fcred a{color:inherit}
+.fvid{margin:22px auto 0;max-width:720px;text-align:center}
+.fvid video{width:100%;max-height:70vh;border-radius:16px;background:#000;display:block}
+.fvid .row{justify-content:center;margin-top:10px}
+.vstage{position:relative;background:#000;border-radius:14px;overflow:hidden;display:grid;place-items:center;min-height:200px}
+.vstage video{width:100%;max-height:58vh;display:block;object-fit:contain}
+.vbar{height:6px;border-radius:3px;background:var(--panel);overflow:hidden;margin:10px 0 0}.vbar i{display:block;height:100%;width:0;background:var(--es);transition:width .3s}
+.rdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#fff;margin-right:8px;vertical-align:middle}
 .wsrch{margin-top:14px}.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
 .wpick{border:2px solid transparent;background:var(--panel);border-radius:12px;padding:4px;color:var(--ink);font-size:12px;text-align:center}
 .wpick:hover,.wpick:focus-visible{border-color:var(--ar)}
@@ -295,6 +302,22 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
   </div>
 </div>
 
+<div class="dlg" id="vdlg" hidden>
+  <div class="box wide" role="dialog" aria-modal="true" aria-labelledby="vt">
+    <h3 id="vt">Video</h3>
+    <p id="vsub">Grabalo aquí o subí uno que ya tengas. Hasta 60 segundos.</p>
+    <div class="vstage"><video id="vlive" playsinline muted autoplay></video><video id="vprev" playsinline controls hidden></video></div>
+    <div class="rt" id="vtime"></div>
+    <div class="row" style="justify-content:center">
+      <button type="button" class="btn" id="vrec" style="background:#c8102e;color:#fff"><span class="rdot"></span>Grabar</button>
+      <button type="button" class="btn ghost" id="vflip">Cambiar cámara</button>
+      <label class="up">Subir video<input type="file" id="vfile" accept="video/*"></label>
+    </div>
+    <div class="vbar" id="vbar" hidden><i></i></div>
+    <p class="msg" id="vmsg" role="status" style="text-align:center"></p>
+    <div class="row end"><button type="button" class="btn ghost" id="vcancel">Cancelar</button><button type="button" class="btn" id="vgo" hidden>Usar este video</button><button type="button" class="btn" id="vsave" disabled>Guardar video</button></div>
+  </div>
+</div>
 <div class="dlg" id="dlg" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="dt">
     <h3 id="dt"></h3>
@@ -422,7 +445,7 @@ function renderFicha(){const e=ENT.find(x=>x.id===FID);if(!e){closeFicha();retur
  const open=[...document.querySelectorAll("#fbox [data-fr][aria-expanded=true]")].map(b=>b.dataset.fr);
  const disc=f?`<img src="${esc(f)}" alt="">`:e.bloque==="locos"?`<span class="cw">${esc(e.palabra)}</span>`:`<span class="ph">${canWrite?"Sin foto · añadila con «Editar»":"Sin foto"}</span>`;
  $("fbox").innerHTML=`<div class="fh"><button type="button" class="btn ghost sm" id="fback">← Volver</button><span class="t">${e.bloque==="locos"?"Sinónimo loco":"Sinónimo puro"} · ${esc(temaName(e.temaId))}</span><div class="fact wonly"><button type="button" class="btn sm" id="fedit">Editar</button><button type="button" class="del" id="fdel">Eliminar</button></div></div>
- <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${f&&e.fotoCred?`<p class="fcred">Foto: ${isUrl(e.fotoSrc)?`<a href="${esc(e.fotoSrc)}" target="_blank" rel="noopener">${esc(e.fotoCred)}</a>`:esc(e.fotoCred)}</p>`:""}${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}`;
+ <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${f&&e.fotoCred?`<p class="fcred">Foto: ${isUrl(e.fotoSrc)?`<a href="${esc(e.fotoSrc)}" target="_blank" rel="noopener">${esc(e.fotoCred)}</a>`:esc(e.fotoCred)}</p>`:""}${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}${videoHTML(e)}`;
  open.forEach(k=>toggleFrase(k,true))}
 function toggleFrase(k,on){const b=document.querySelector(`#fbox [data-fr="${k}"]`),d=$("fr-"+k);if(!b||!d)return;on=on??d.hidden;d.hidden=!on;b.setAttribute("aria-expanded",on);b.textContent=on?"Ocultar frase":"Ver frase"}
 function openFicha(id,push=true){FID=id;renderFicha();$("ficha").hidden=false;document.body.style.overflow="hidden";if(push&&location.hash!=="#p-"+id)history.pushState({f:id},"","#p-"+id);setTimeout(()=>{const b=$("fback");b&&b.focus()},0)}
@@ -435,13 +458,14 @@ $("ficha").onclick=e=>{if(e.target===$("ficha"))return closeFicha();
  const fr=e.target.closest("[data-fr]");if(fr)return toggleFrase(fr.dataset.fr);
  const s=e.target.closest(".vb.std");if(s)return say(s);
  const p=e.target.closest("[data-play]");if(p)return playMine(p);
- const r=e.target.closest("[data-rec]");if(r)return openRec(r)};
+ const r=e.target.closest("[data-rec]");if(r)return openRec(r);
+ if(e.target.closest("[data-vid]"))return openVid();if(e.target.closest("[data-vdel]"))return delVid()};
 
 // voz: pronunciación Standard
 async function say(btn){const w=btn.dataset.say.replace(/\(.*?\)/g,"").replace(/\s*\/\s*/g,", ").trim(),l=LBY[btn.dataset.l];stopAll();btn.classList.add("on");try{await local(w,l.tts)}catch(e){}btn.classList.remove("on")}
 function local(w,lang){return new Promise((ok,ko)=>{if(!("speechSynthesis"in window))return ko();const u=new SpeechSynthesisUtterance(w);u.lang=lang;const vs=speechSynthesis.getVoices(),v=vs.find(v=>v.lang.replace("_","-")===lang)||vs.find(v=>v.lang.startsWith(lang.slice(0,2)));if(v)u.voice=v;u.onend=ok;u.onerror=ko;speechSynthesis.cancel();speechSynthesis.speak(u)})}
 let player=null;
-function stopAll(){document.querySelectorAll(".vb.on").forEach(x=>x.classList.remove("on"));if(player){player.pause();player=null}try{speechSynthesis.cancel()}catch(e){}}
+function stopAll(){document.querySelectorAll(".vb.on").forEach(x=>x.classList.remove("on"));document.querySelectorAll("#fbox video").forEach(v=>{try{v.pause()}catch(e){}});if(player){player.pause();player=null}try{speechSynthesis.cancel()}catch(e){}}
 async function getAudio(k,p){const ck=k+"|"+p;if(ACACHE[ck])return ACACHE[ck];const f=voicesOf(k)[p]&&voicesOf(k)[p].archivo;if(!sb||!f)return null;const u=sb.storage.from("audios").getPublicUrl(f).data.publicUrl;if(typeof u==="string"&&u.startsWith("https://")){ACACHE[ck]=u;return u}return null}
 async function playMine(btn){stopAll();btn.classList.add("on");
  try{const u=await getAudio(btn.dataset.play,btn.dataset.p);if(!u)throw 0;const a=new Audio(u);player=a;a.onended=a.onerror=()=>btn.classList.remove("on");await a.play()}
@@ -545,7 +569,7 @@ $("eform").onsubmit=async ev=>{ev.preventDefault();if(dTarget)dict.stop();const 
  $("esave").disabled=false};
 async function delEntry(id){const e=ENT.find(x=>x.id===id);if(!e)return;if(!window.confirm(`¿Eliminar «${headWord(e,"es")}» del diccionario?`))return;
  const r=await sb.from("entradas").delete().eq("id",id);if(r.error){alert("No se pudo eliminar"+errText(r.error));return}
- if(e.foto&&!isUrl(e.foto))sb.storage.from("fotos").remove([e.foto]);closeFicha();await loadAll()}
+ if(e.foto&&!isUrl(e.foto))sb.storage.from("fotos").remove([e.foto]);if(e.video)sb.storage.from("videos").remove([e.video]);closeFicha();await loadAll()}
 
 // fotos de Wikipedia
 const clean=w=>String(w||"").replace(/\(.*?\)/g,"").replace(/^to /i,"").split("/")[0].trim();
@@ -589,6 +613,64 @@ async function fillPhotos(){const btn=$("fillfotos"),st=t=>$("fillmsg").textCont
  btn.disabled=false}
 $("fillfotos").onclick=fillPhotos;
 
+// video
+const MAXV=60;
+const VMT=(()=>{if(!window.MediaRecorder)return "";for(const t of["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4;codecs=avc1,mp4a","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"])try{if(MediaRecorder.isTypeSupported(t))return t}catch(e){}return ""})();
+const vidUrl=p=>{if(!sb||!p)return "";const u=sb.storage.from("videos").getPublicUrl(p).data.publicUrl;return typeof u==="string"&&u.startsWith("https://")?u:""};
+function videoHTML(e){const u=vidUrl(e.video);let h='<div class="fvid">';
+ if(u)h+=`<video controls playsinline preload="metadata" src="${esc(u)}#t=0.1"></video>${e.videoPor?`<p class="fcred">Video de ${esc(e.videoPor)}</p>`:""}`;
+ if(canWrite)h+=`<div class="row wonly"><button type="button" class="btn ${u?"ghost ":""}sm" data-vid>${u?"Cambiar video":"Añadir video"}</button>${u?'<button type="button" class="del" data-vdel>Quitar video</button>':""}</div>`;
+ return h+"</div>"}
+const V={stream:null,facing:"user",mr:null,timer:null,blob:null,file:null,busy:false};
+const vmsg=t=>$("vmsg").textContent=t;
+function vStopCam(){if(V.stream){V.stream.getTracks().forEach(t=>t.stop());V.stream=null}$("vlive").srcObject=null}
+async function vStartCam(){vStopCam();if(!navigator.mediaDevices||!VMT){$("vlive").hidden=true;$("vrec").hidden=true;$("vflip").hidden=true;vmsg("Este navegador no permite grabar video aquí: subí uno con «Subir video».");return}
+ try{V.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:V.facing,width:{ideal:1280},height:{ideal:720}},audio:true});$("vlive").srcObject=V.stream;$("vlive").hidden=false;$("vprev").hidden=true;$("vrec").hidden=false;$("vflip").hidden=false}
+ catch(e){$("vlive").hidden=true;$("vrec").hidden=true;$("vflip").hidden=true;vmsg("No se pudo usar la cámara (revisá el permiso). Podés subir un video con «Subir video».")}}
+function openVid(){if(!canWrite)return openLogin();const e=ENT.find(x=>x.id===FID);if(!e)return;stopAll();
+ Object.assign(V,{blob:null,file:null,busy:false});$("vt").textContent=`Video para «${headWord(e,"es")}»`;vmsg("");$("vtime").textContent="";$("vbar").hidden=true;$("vgo").hidden=true;
+ $("vsave").disabled=true;$("vsave").textContent="Guardar video";$("vrec").innerHTML='<span class="rdot"></span>Grabar';$("vprev").removeAttribute("src");$("vprev").hidden=true;$("vdlg").hidden=false;vStartCam()}
+function closeVid(){if(V.mr&&V.mr.state==="recording"){V.mr.onstop=null;V.mr.stop()}clearInterval(V.timer);vStopCam();try{$("vprev").pause()}catch(e){}$("vdlg").hidden=true}
+$("vcancel").onclick=closeVid;
+$("vflip").onclick=()=>{V.facing=V.facing==="user"?"environment":"user";vStartCam()};
+function showPrev(blob){V.blob=blob;const u=URL.createObjectURL(blob);$("vprev").src=u;$("vprev").hidden=false;$("vlive").hidden=true;$("vsave").disabled=false;
+ vmsg(`Listo (${(blob.size/1048576).toFixed(1)} MB). Miralo y, si te gusta, guardalo.`)}
+$("vrec").onclick=()=>{if(V.mr&&V.mr.state==="recording"){V.mr.stop();return}
+ if(!V.stream||!$("vlive").srcObject||$("vlive").hidden){vStartCam();$("vrec").innerHTML='<span class="rdot"></span>Grabar';return}
+ const ch=[];let mr;try{mr=new MediaRecorder(V.stream,{mimeType:VMT,videoBitsPerSecond:1500000,audioBitsPerSecond:96000})}catch(e){mr=new MediaRecorder(V.stream)}V.mr=mr;
+ mr.ondataavailable=e=>e.data.size&&ch.push(e.data);
+ mr.onstop=()=>{clearInterval(V.timer);$("vrec").innerHTML='<span class="rdot"></span>Grabar otra vez';showPrev(new Blob(ch,{type:(mr.mimeType||VMT).split(";")[0]}))};
+ mr.start(1000);const t0=Date.now();$("vrec").textContent="■ Parar";$("vsave").disabled=true;vmsg("Grabando…");$("vflip").hidden=true;
+ V.timer=setInterval(()=>{const s=(Date.now()-t0)/1000;$("vtime").textContent=`${Math.floor(s)} s de ${MAXV}`;if(s>=MAXV&&mr.state==="recording")mr.stop()},250)};
+$("vfile").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;V.file=f;vStopCam();$("vlive").hidden=true;
+ const u=URL.createObjectURL(f);$("vprev").src=u;$("vprev").hidden=false;$("vsave").disabled=true;
+ const small=f.size<=15*1048576&&/^video\/(mp4|webm)$/.test(f.type);
+ if(small){V.blob=f;$("vsave").disabled=false;vmsg(`Video elegido (${(f.size/1048576).toFixed(1)} MB). Tocá «Guardar video».`);$("vgo").hidden=true}
+ else{$("vgo").hidden=!VMT;vmsg(VMT?`Este video pesa ${(f.size/1048576).toFixed(1)} MB. Tocá «Usar este video» para reducirlo antes de subirlo (tarda lo mismo que dura el video; dejá la pantalla encendida).`:"Este navegador no puede reducir videos. Probá desde Chrome o Safari.")}};
+$("vgo").onclick=async()=>{if(!V.file||V.busy)return;V.busy=true;$("vgo").hidden=true;$("vbar").hidden=false;$("vbar").firstElementChild.style.width="0";
+ try{const b=await transcode(V.file,p=>{$("vbar").firstElementChild.style.width=Math.round(p*100)+"%";vmsg(`Reduciendo video… ${Math.round(p*100)}%`)});$("vbar").hidden=true;showPrev(b)}
+ catch(e){$("vbar").hidden=true;vmsg("No se pudo preparar ese video. Probá con otro o grabalo desde aquí.")}V.busy=false};
+async function transcode(file,prog){const url=URL.createObjectURL(file),v=document.createElement("video");v.src=url;v.playsInline=true;v.preload="auto";
+ await new Promise((ok,ko)=>{v.onloadedmetadata=ok;v.onerror=ko});
+ const dur=Math.min(isFinite(v.duration)?v.duration:MAXV,MAXV),M=960,sc=Math.min(1,M/Math.max(v.videoWidth,v.videoHeight)),ev=n=>Math.max(2,Math.round(n/2)*2);
+ const c=document.createElement("canvas");c.width=ev(v.videoWidth*sc);c.height=ev(v.videoHeight*sc);const g=c.getContext("2d");const cs=c.captureStream(30);
+ const AC=window.AudioContext||window.webkitAudioContext;let ac=null;try{ac=new AC();const src=ac.createMediaElementSource(v),dst=ac.createMediaStreamDestination();src.connect(dst);dst.stream.getAudioTracks().forEach(t=>cs.addTrack(t))}catch(e){}
+ const rec=new MediaRecorder(cs,{mimeType:VMT,videoBitsPerSecond:1500000,audioBitsPerSecond:96000}),ch=[];rec.ondataavailable=e=>e.data.size&&ch.push(e.data);
+ const done=new Promise(ok=>rec.onstop=ok);let raf;
+ const stop=()=>{cancelAnimationFrame(raf);if(rec.state==="recording")rec.stop();v.pause()};
+ const draw=()=>{g.drawImage(v,0,0,c.width,c.height);prog(Math.min(1,v.currentTime/dur));if(v.ended||v.currentTime>=dur)stop();else raf=requestAnimationFrame(draw)};
+ v.onended=stop;rec.start(1000);if(ac)await ac.resume();await v.play();draw();await done;if(ac)ac.close();URL.revokeObjectURL(url);
+ return new Blob(ch,{type:VMT.split(";")[0]})}
+$("vsave").onclick=async()=>{const e=ENT.find(x=>x.id===FID);if(!V.blob||!e)return;$("vsave").disabled=true;vmsg("Subiendo video…");
+ try{if(V.blob.size>48*1048576)throw new Error("el video pesa más de 48 MB");const ext=/mp4|quicktime/.test(V.blob.type)?"mp4":"webm",path=e.id+"-"+Date.now()+"."+ext;
+  const up=await sb.storage.from("videos").upload(path,V.blob,{contentType:V.blob.type||"video/"+ext});if(up.error)throw up.error;
+  const r=await sb.from("entradas").update({video:path,video_por:ME.nombre}).eq("id",e.id);if(r.error)throw r.error;
+  if(e.video)sb.storage.from("videos").remove([e.video]);closeVid();await loadAll()}
+ catch(err){$("vsave").disabled=false;vmsg("No se pudo subir"+errText(err))}};
+async function delVid(){const e=ENT.find(x=>x.id===FID);if(!e||!e.video)return;if(!window.confirm("¿Quitar el video de esta palabra?"))return;
+ const r=await sb.from("entradas").update({video:null,video_por:null}).eq("id",e.id);if(r.error)return alert("No se pudo quitar"+errText(r.error));
+ sb.storage.from("videos").remove([e.video]);await loadAll()}
+
 // dictado
 const SRec=window.SpeechRecognition||window.webkitSpeechRecognition;
 let dTarget=null,dBase="",dBtn=null;
@@ -616,7 +698,7 @@ async function loadAll(){const[a,b,t]=await Promise.all([sb.from("entradas").sel
  TEMAS=t.data.map(x=>({id:x.id,nombre:str(x.nombre,40),orden:+x.orden||0}));
  ENT=a.data.map(v=>{const pw=v.palabras&&typeof v.palabras==="object"?v.palabras:{},fr=v.frases&&typeof v.frases==="object"?v.frases:{};const w={},f={};
   for(const l of LK){if(Array.isArray(pw[l]))w[l]=pw[l].filter(x=>typeof x==="string"&&x.trim()).map(x=>x.slice(0,120));if(typeof fr[l]==="string"&&fr[l].trim())f[l]=fr[l].slice(0,300)}
-  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
+  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),video:str(v.video,200),videoPor:str(v.video_por,30),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
  const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;
  loaded=true;render();if(FID)renderFicha();if(ME&&ME.admin)renderTemas();
  const m=location.hash.match(/^#p-(.+)$/);if(m&&!FID&&ENT.some(e=>e.id===m[1]))openFicha(m[1],false)}
@@ -702,12 +784,12 @@ $("pform").onsubmit=async e=>{e.preventDefault();const nombre=$("p-nom").value.t
  if(r.error)return pmsg(/duplicate|unique/i.test(r.error.message)?"Ya existe una persona con ese nombre o ese email.":"No se pudo añadir"+errText(r.error));
  $("pform").reset();pmsg(`${nombre} añadida. Que entre con «Entrar → Primera vez» y ese email.`);loadPeople()};
 
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("dlg").hidden)return closeRec();if(!$("edlg").hidden)return $("edlg").hidden=true;if(!$("ldlg").hidden)return $("ldlg").hidden=true;if(FID)closeFicha()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("vdlg").hidden)return closeVid();if(!$("dlg").hidden)return closeRec();if(!$("edlg").hidden)return $("edlg").hidden=true;if(!$("ldlg").hidden)return $("ldlg").hidden=true;if(FID)closeFicha()});
 
 // arranque
 if(configured&&window.supabase){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
  sb.auth.onAuthStateChange((ev,s)=>{session=s;setTimeout(async()=>{await loadMe();await loadAjustes();await loadAll()},0)});
- document.addEventListener("visibilitychange",()=>{if(!document.hidden&&$("edlg").hidden&&$("dlg").hidden)loadAll()})}
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&$("edlg").hidden&&$("dlg").hidden&&$("vdlg").hidden)loadAll()})}
 else amsg("Falta configurar Supabase en el archivo.");
 }
 </script>
