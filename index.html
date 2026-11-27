@@ -109,6 +109,12 @@ body.nospeak .vb.std{display:none}
 .sq.hasc .corner.ar,.sq.hasc .corner.ca{padding-right:clamp(70px,11vw,120px)}
 .sq.hasc .corner.es,.sq.hasc .corner.en{padding-left:clamp(70px,11vw,120px)}
 .fnota{color:var(--mute);margin:16px 0 0}
+.fcred{font-size:12px;color:var(--mute);margin:10px 0 0;text-align:center}.fcred a{color:inherit}
+.wsrch{margin-top:14px}.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
+.wpick{border:2px solid transparent;background:var(--panel);border-radius:12px;padding:4px;color:var(--ink);font-size:12px;text-align:center}
+.wpick:hover,.wpick:focus-visible{border-color:var(--ar)}
+.wpick img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block;margin-bottom:4px}
+.wpick span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:700px){.sq{grid-template-columns:minmax(0,1fr)}.center{position:static;translate:none;display:grid;place-items:center;order:-1;margin-bottom:6px}
  .sq.hasc .corner{min-height:0;padding:14px 16px!important}.corner{min-height:0}.corner.es,.corner.en{text-align:left;align-items:flex-start}.corner.es .vz,.corner.en .vz{justify-content:flex-start}.disc{width:170px}}
 /* formularios y diálogos */
@@ -218,6 +224,9 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
       <label class="opt"><input type="radio" name="pub" value="0"> <span><b>App privada:</b> solo las personas de la lista</span></label>
       <label class="opt mt"><input type="checkbox" id="ocstd"> <span>Ocultar la voz <b>Standard</b> en las palabras y frases que ya tienen una voz nuestra</span></label>
       <p class="msg" id="ajmsg" role="status"></p>
+      <div class="mt" style="border-top:1px solid var(--line);padding-top:14px"><b>Fotos automáticas</b>
+        <p class="lead" style="margin:4px 0 10px">Pone la foto principal del artículo de Wikipedia (siempre con licencia libre) a las palabras que todavía no tienen foto. No toca las que ya tienen una. Después podés cambiar cualquiera desde «Editar».</p>
+        <button type="button" class="btn" id="fillfotos">Poner fotos de Wikipedia</button><p class="msg" id="fillmsg" role="status"></p></div>
     </div>
     <div class="card" id="v-tem">
       <h3>Temas</h3>
@@ -257,6 +266,7 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
       <div class="g4" id="elangs"></div>
       <label for="e-nota" class="mt">Nota (opcional)</label><input class="t" id="e-nota" placeholder="uso, registro, aclaración…">
       <div class="efoto"><span id="e-img"></span><label class="up">Elegir foto<input type="file" id="e-file" accept="image/*"></label><button type="button" class="del" id="e-nofoto">Quitar foto</button></div>
+      <div class="wsrch"><label for="e-wq">…o buscar una foto libre en Wikipedia</label><div class="fld"><input class="t" id="e-wq" placeholder="ej. strawberry"><select class="t" id="e-wl" style="width:auto;min-width:80px;flex:none" aria-label="Wikipedia en"><option value="en">EN</option><option value="es">ES</option><option value="ca">CA</option></select><button type="button" class="btn ghost" id="e-wgo">Buscar</button></div><div class="wgrid" id="e-wres"></div></div>
       <p class="msg" id="emsg" role="status"></p>
       <div class="row end"><button type="button" class="btn ghost" id="ecancel">Cancelar</button><button class="btn" id="esave">Guardar</button></div>
     </form>
@@ -328,7 +338,10 @@ const headWord=(e,l)=>e.bloque==="locos"?e.palabra:(words(e,l)[0]||LK.map(k=>wor
 function keysOf(e){const ks=[];for(const l of LK){if(e.bloque==="locos"){if(e.palabra)ks.push(akey(l,e.palabra))}else words(e,l).forEach(w=>ks.push(akey(l,w)));if(e.frases[l])ks.push(fkey(l,e.id))}return ks}
 const voicesOf=k=>VOC[k]||{};
 const hasMine=k=>Object.keys(voicesOf(k)).length>0;
-const fotoUrl=p=>{if(!sb||!p)return "";const u=sb.storage.from("fotos").getPublicUrl(p).data.publicUrl;return typeof u==="string"&&u.startsWith("https://")?u:""};
+const CUR={"s000": "Bus", "s001": "Car", "s002": "Buenos Aires Underground", "s003": "Driving", "s004": "Parking", "s005": "Ticket (admission)", "s006": "Gasoline", "s007": "Road", "s008": "Sidewalk", "s009": "City block", "s010": "Bus stop", "s011": "Strawberry", "s012": "Peach", "s013": "Avocado", "s014": "Corn on the cob", "s015": "Pea", "s016": "Bean", "s017": "Green bean", "s018": "Potato", "s019": "Sweet potato", "s020": "Pumpkin", "s021": "Zucchini", "s022": "Pineapple", "s023": "Banana", "s024": "Grapefruit", "s025": "Butter", "s026": "Cream", "s027": "Bacon", "s028": "Popcorn", "s029": "Juice", "s030": "Cake", "s031": "Pastry", "s032": "Strawberries and cream", "s033": "T-shirt", "s034": "Skirt", "s035": "Jacket", "s036": "Sweatshirt", "s037": "Sneakers", "s038": "Sock", "s039": "Swimsuit", "s040": "Bra", "s041": "Glasses", "s042": "Refrigerator", "s043": "Tap (valve)", "s044": "Wardrobe", "s045": "Apartment", "s046": "Living room", "s047": "Swimming pool", "s048": "Kettle", "s049": "Baby bottle", "s050": "Adhesive bandage", "s051": "Suitcase", "s052": "Lighter", "s053": "Mobile phone", "s054": "Computer", "s055": "Ballpoint pen", "s056": "Postage stamp", "s057": "Nightclub", "s058": null, "s059": "Anger", "s060": null, "s061": null, "s062": null, "s063": null, "s064": null, "s065": null, "s066": null, "s067": null, "s068": null, "s069": null, "s070": null, "s071": null, "s072": "Money", "s073": null, "s074": null, "s075": "Laziness", "s076": "Anger", "s077": null, "s078": "Child", "s079": "Cigarette"};
+const WIKI_OK=u=>typeof u==="string"&&/^https:\/\/upload\.wikimedia\.org\//.test(u);
+const isUrl=p=>/^https:\/\//.test(p||"");
+const fotoUrl=(p,small)=>{if(!p)return "";if(isUrl(p))return WIKI_OK(p)?(small?p.replace(/\/\d+px-/,"/120px-"):p):"";if(!sb)return "";const u=sb.storage.from("fotos").getPublicUrl(p).data.publicUrl;return typeof u==="string"&&u.startsWith("https://")?u:""};
 
 // búsqueda
 function score(e,q){let best=0,hit=null;
@@ -354,7 +367,7 @@ function renderFilters(){
  for(const b of ["puros","locos"])$("n-"+b).textContent=ENT.filter(e=>e.bloque===b).length+" palabras"}
 
 function rowHTML(e){const f=fotoUrl(e.foto),hw=headWord(e,sortLang());
- const th=`<span class="th">${f?`<img src="${esc(f)}" alt="" loading="lazy">`:esc((hw||"?").charAt(0).toUpperCase())}</span>`;
+ const th=`<span class="th">${f?`<img src="${esc(fotoUrl(e.foto,true))}" alt="" loading="lazy">`:esc((hw||"?").charAt(0).toUpperCase())}</span>`;
  let mid;
  if(e.bloque==="locos")mid=`<span><span class="lw">${esc(e.palabra)}</span><span class="lm">${LANGS.filter(l=>words(e,l.k).length).map(l=>l.tag+": "+esc(words(e,l.k)[0])).join(" · ")}</span></span>`;
  else mid=`<span class="ws">${LANGS.map(l=>{const w=words(e,l.k),mine=w.some(x=>hasMine(akey(l.k,x)));return `<span class="wl ${l.k}${w.length?"":" no"}"><i>${l.tag}</i><span>${esc(w[0]||"—")}</span>${w.length>1?`<small>+${w.length-1}</small>`:""}${mine?'<b class="dot" title="Tiene voz nuestra"></b>':""}</span>`}).join("")}</span>`;
@@ -401,7 +414,7 @@ function renderFicha(){const e=ENT.find(x=>x.id===FID);if(!e){closeFicha();retur
  const open=[...document.querySelectorAll("#fbox [data-fr][aria-expanded=true]")].map(b=>b.dataset.fr);
  const disc=f?`<img src="${esc(f)}" alt="">`:e.bloque==="locos"?`<span class="cw">${esc(e.palabra)}</span>`:`<span class="ph">${canWrite?"Sin foto · añadila con «Editar»":"Sin foto"}</span>`;
  $("fbox").innerHTML=`<div class="fh"><button type="button" class="btn ghost sm" id="fback">← Volver</button><span class="t">${e.bloque==="locos"?"Sinónimo loco":"Sinónimo puro"} · ${esc(temaName(e.temaId))}</span><div class="fact wonly"><button type="button" class="btn sm" id="fedit">Editar</button><button type="button" class="del" id="fdel">Eliminar</button></div></div>
- <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}`;
+ <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${f&&e.fotoCred?`<p class="fcred">Foto: ${isUrl(e.fotoSrc)?`<a href="${esc(e.fotoSrc)}" target="_blank" rel="noopener">${esc(e.fotoCred)}</a>`:esc(e.fotoCred)}</p>`:""}${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}`;
  open.forEach(k=>toggleFrase(k,true))}
 function toggleFrase(k,on){const b=document.querySelector(`#fbox [data-fr="${k}"]`),d=$("fr-"+k);if(!b||!d)return;on=on??d.hidden;d.hidden=!on;b.setAttribute("aria-expanded",on);b.textContent=on?"Ocultar frase":"Ver frase"}
 function openFicha(id,push=true){FID=id;renderFicha();$("ficha").hidden=false;document.body.style.overflow="hidden";if(push&&location.hash!=="#p-"+id)history.pushState({f:id},"","#p-"+id);setTimeout(()=>{const b=$("fback");b&&b.focus()},0)}
@@ -469,7 +482,7 @@ $("rdel").onclick=async()=>{const k=R.k,p=R.p;$("rdel").disabled=true;
  catch(e){rmsg("No se pudo quitar la grabación"+errText(e))}$("rdel").disabled=false};
 
 // editar / añadir
-let EID=null,EB="puros",EFOTO=null,ENOFOTO=false;
+let EID=null,EB="puros",EFOTO=null,ENOFOTO=false,EWIKI=null,WRES=[];
 function wrow(l,w){return `<div class="fld"><input class="t ew" value="${esc(w)}" aria-label="Palabra"><button type="button" class="mic sm" data-l="${l}" aria-label="Dictar">${MIC}</button><button type="button" class="xw" aria-label="Quitar">×</button></div>`}
 function renderELangs(e){$("elangs").innerHTML=LANGS.map(l=>{const w=e?words(e,l.k):[];const list=w.length?w:[""];
  return `<fieldset class="el ${l.k}"><legend>${l.tag} · ${l.n}</legend><label>${EB==="locos"?"Qué significa allí":"Palabra"}</label><div class="wlist" data-l="${l.k}">${list.map(x=>wrow(l.k,x)).join("")}</div>
@@ -481,7 +494,7 @@ function setEB(b){EB=b;$("ebloque").querySelectorAll("button").forEach(x=>x.setA
  document.querySelectorAll("#elangs .addw").forEach(x=>x.textContent="+ "+(b==="locos"?"otro significado":"otra palabra"))}
 $("ebloque").onclick=e=>{const b=e.target.closest("[data-b]");if(b)setEB(b.dataset.b)};
 function renderEImg(url){$("e-img").innerHTML=url?`<img src="${esc(url)}" alt="Foto">`:`<span class="ph0" style="display:inline-block"></span>`;$("e-nofoto").hidden=!url}
-function openEdit(id,prefill){if(!canWrite)return openLogin();const e=id?ENT.find(x=>x.id===id):null;EID=id;EFOTO=null;ENOFOTO=false;
+function openEdit(id,prefill){if(!canWrite)return openLogin();const e=id?ENT.find(x=>x.id===id):null;EID=id;EFOTO=null;ENOFOTO=false;EWIKI=null;WRES=[];$("e-wres").innerHTML="";const en0=e&&clean(words(e,"en")[0]);$("e-wq").value=e?(en0||clean(words(e,"es")[0])||e.palabra||""):(prefill||"");$("e-wl").value=e&&!en0?"es":"en";
  $("et").textContent=e?"Editar":"Añadir palabra";setEB(e?e.bloque:S.bloque);renderELangs(e);setEB(EB);
  $("e-centro").value=e?e.palabra||"":(S.bloque==="locos"?prefill||"":"");
  if(!e&&prefill&&S.bloque==="puros"){const l=S.scope==="all"?"es":S.scope;const inp=document.querySelector(`#elangs .wlist[data-l="${l}"] .ew`);if(inp)inp.value=prefill}
@@ -492,9 +505,9 @@ $("e-tema").onchange=()=>{$("e-newtema").hidden=$("e-tema").value!=="__new";if(!
 $("elangs").onclick=e=>{const a=e.target.closest(".addw");if(a){const wl=document.querySelector(`#elangs .wlist[data-l="${a.dataset.l}"]`);wl.insertAdjacentHTML("beforeend",wrow(a.dataset.l,""));wl.lastElementChild.querySelector("input").focus();return}
  const x=e.target.closest(".xw");if(x){const wl=x.closest(".wlist");if(wl.children.length>1)x.parentElement.remove();else x.parentElement.querySelector("input").value=""}};
 $("ecancel").onclick=()=>$("edlg").hidden=true;
-$("e-nofoto").onclick=()=>{ENOFOTO=true;EFOTO=null;renderEImg("")};
+$("e-nofoto").onclick=()=>{ENOFOTO=true;EFOTO=null;EWIKI=null;renderEImg("")};
 $("e-file").onchange=async ev=>{const f=ev.target.files&&ev.target.files[0];ev.target.value="";if(!f)return;$("emsg").textContent="Preparando foto…";
- try{EFOTO=await shrink(f);ENOFOTO=false;renderEImg(URL.createObjectURL(EFOTO));$("emsg").textContent=""}catch(e){$("emsg").textContent="No pude leer esa imagen. Probá con otra (jpg, png, heic desde el móvil…)."}};
+ try{EFOTO=await shrink(f);ENOFOTO=false;EWIKI=null;renderEImg(URL.createObjectURL(EFOTO));$("emsg").textContent=""}catch(e){$("emsg").textContent="No pude leer esa imagen. Probá con otra (jpg, png, heic desde el móvil…)."}};
 function shrink(file){return new Promise((ok,ko)=>{const u=URL.createObjectURL(file),img=new Image();img.onload=()=>{const M=900,s=Math.min(1,M/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ko(),"image/jpeg",.82)};img.onerror=()=>{URL.revokeObjectURL(u);ko()};img.src=u})}
 $("eform").onsubmit=async ev=>{ev.preventDefault();if(dTarget)dict.stop();const old=EID?ENT.find(x=>x.id===EID):null;
  const palabras={},frases={};for(const l of LK){const w=[...document.querySelectorAll(`#elangs .wlist[data-l="${l}"] .ew`)].map(i=>i.value.trim()).filter(Boolean);if(w.length)palabras[l]=[...new Set(w)];const f=document.querySelector(`#elangs .ef[data-l="${l}"]`).value.trim();if(f)frases[l]=f}
@@ -513,15 +526,60 @@ $("eform").onsubmit=async ev=>{ev.preventDefault();if(dTarget)dict.stop();const 
   if(old){const mv=[];for(const l of LK){if(old.bloque==="locos"&&EB==="locos"&&old.palabra&&centro&&akey(l,old.palabra)!==akey(l,centro))mv.push([akey(l,old.palabra),akey(l,centro)]);
     if(old.bloque==="puros"&&EB==="puros"){const a=words(old,l),b=palabras[l]||[];a.forEach((w,i)=>{if(b[i]&&!b.includes(w)&&akey(l,w)!==akey(l,b[i]))mv.push([akey(l,w),akey(l,b[i])])})}}
    for(const[a,b]of mv)if(hasMine(a))await sb.rpc("mover_voces",{vieja:a,nueva:b})}
+  const dropOld=()=>{if(old&&old.foto&&!isUrl(old.foto))sb.storage.from("fotos").remove([old.foto])};
   if(EFOTO){const path=id+"-"+Date.now()+".jpg";const up=await sb.storage.from("fotos").upload(path,EFOTO,{contentType:"image/jpeg"});if(up.error)throw up.error;
-   const r=await sb.from("entradas").update({foto:path}).eq("id",id);if(r.error)throw r.error;if(old&&old.foto)sb.storage.from("fotos").remove([old.foto])}
-  else if(ENOFOTO&&old&&old.foto){await sb.from("entradas").update({foto:null}).eq("id",id);sb.storage.from("fotos").remove([old.foto])}
+   const r=await sb.from("entradas").update({foto:path,foto_credito:null,foto_fuente:null}).eq("id",id);if(r.error)throw r.error;dropOld()}
+  else if(EWIKI){const c=(await wikiCredits([EWIKI.file]))[EWIKI.file]||wikiFallback(EWIKI);
+   const r=await sb.from("entradas").update({foto:EWIKI.url,foto_credito:c.credit,foto_fuente:c.src}).eq("id",id);if(r.error)throw r.error;dropOld()}
+  else if(ENOFOTO&&old&&old.foto){await sb.from("entradas").update({foto:null,foto_credito:null,foto_fuente:null}).eq("id",id);dropOld()}
   await loadAll();$("edlg").hidden=true;if(!old){S.bloque=EB;$("blocks").querySelectorAll("button").forEach(c=>c.setAttribute("aria-pressed",c.dataset.b===EB));render();openFicha(id)}}
  catch(err){$("emsg").textContent="No se pudo guardar"+errText(err)}
  $("esave").disabled=false};
 async function delEntry(id){const e=ENT.find(x=>x.id===id);if(!e)return;if(!window.confirm(`¿Eliminar «${headWord(e,"es")}» del diccionario?`))return;
  const r=await sb.from("entradas").delete().eq("id",id);if(r.error){alert("No se pudo eliminar"+errText(r.error));return}
- if(e.foto)sb.storage.from("fotos").remove([e.foto]);closeFicha();await loadAll()}
+ if(e.foto&&!isUrl(e.foto))sb.storage.from("fotos").remove([e.foto]);closeFicha();await loadAll()}
+
+// fotos de Wikipedia
+const clean=w=>String(w||"").replace(/\(.*?\)/g,"").replace(/^to /i,"").split("/")[0].trim();
+const txt=h=>{if(!h)return "";const d=new DOMParser().parseFromString(String(h),"text/html");return (d.body.textContent||"").replace(/\s+/g," ").trim().slice(0,80)};
+const wikiFallback=f=>({credit:"Wikipedia",src:"https://"+(f.wiki||"en")+".wikipedia.org/wiki/"+encodeURIComponent(String(f.title||"").replace(/ /g,"_"))});
+async function wikiImages(lang,titles){const out={};
+ for(let i=0;i<titles.length;i+=40){const chunk=titles.slice(i,i+40);
+  const u=`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail|name&pithumbsize=500&pilicense=free&redirects=1&titles=`+encodeURIComponent(chunk.join("|"));
+  const j=await (await fetch(u)).json(),q=j.query||{};
+  const fin=t=>{for(const n of q.normalized||[])if(n.from===t)t=n.to;for(const r of q.redirects||[])if(r.from===t)t=r.to;return t};
+  const by={};Object.values(q.pages||{}).forEach(pg=>{if(pg.thumbnail&&pg.pageimage&&WIKI_OK(pg.thumbnail.source))by[pg.title]={url:pg.thumbnail.source,file:pg.pageimage,title:pg.title,wiki:lang}});
+  chunk.forEach(t=>{const r=by[fin(t)];if(r)out[t]=r})}
+ return out}
+async function wikiCredits(files){const out={};
+ for(let i=0;i<files.length;i+=40){const chunk=files.slice(i,i+40);
+  const u="https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=extmetadata&iiextmetadatafilter=Artist|LicenseShortName&titles="+encodeURIComponent(chunk.map(f=>"File:"+f).join("|"));
+  try{const j=await (await fetch(u)).json(),q=j.query||{},back={};(q.normalized||[]).forEach(n=>back[n.to]=n.from);
+   Object.values(q.pages||{}).forEach(pg=>{const md=pg.imageinfo&&pg.imageinfo[0]&&pg.imageinfo[0].extmetadata;if(!md)return;const orig=(back[pg.title]||pg.title).replace(/^File:/,"");
+    out[orig]={credit:[txt(md.Artist&&md.Artist.value),txt(md.LicenseShortName&&md.LicenseShortName.value),"Wikimedia Commons"].filter(Boolean).join(" · ").slice(0,200),src:"https://commons.wikimedia.org/wiki/"+encodeURIComponent(pg.title.replace(/ /g,"_"))}})}catch(e){}}
+ return out}
+$("e-wgo").onclick=async()=>{const q=$("e-wq").value.trim(),lang=$("e-wl").value;if(!q)return;$("e-wres").innerHTML='<p class="msg">Buscando…</p>';
+ try{const u=`https://${lang}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=12&prop=pageimages&piprop=thumbnail|name&pithumbsize=500&pilicense=free`;
+  const j=await (await fetch(u)).json();const ps=Object.values((j.query||{}).pages||{}).filter(pg=>pg.thumbnail&&pg.pageimage&&WIKI_OK(pg.thumbnail.source)).sort((a,b)=>(a.index||0)-(b.index||0));
+  WRES=ps.map(pg=>({url:pg.thumbnail.source,file:pg.pageimage,title:pg.title,wiki:lang}));
+  $("e-wres").innerHTML=WRES.length?WRES.map((r,i)=>`<button type="button" class="wpick" data-i="${i}"><img src="${esc(fotoUrl(r.url,true))}" alt=""><span>${esc(r.title)}</span></button>`).join(""):'<p class="msg">Sin resultados con foto. Probá con otra palabra o en otro idioma.</p>'}
+ catch(e){$("e-wres").innerHTML='<p class="msg">No se pudo buscar. ¿Hay conexión?</p>'}};
+$("e-wq").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("e-wgo").click()}});
+$("e-wres").onclick=e=>{const b=e.target.closest(".wpick");if(!b)return;EWIKI=WRES[+b.dataset.i];EFOTO=null;ENOFOTO=false;renderEImg(EWIKI.url);$("e-wres").innerHTML=`<p class="msg">Elegida: «${esc(EWIKI.title)}». Se guarda al tocar «Guardar».</p>`};
+async function fillPhotos(){const btn=$("fillfotos"),st=t=>$("fillmsg").textContent=t;btn.disabled=true;
+ try{const plan=ENT.filter(e=>!e.foto&&e.bloque==="puros").map(e=>{const cur=e.semilla&&Object.prototype.hasOwnProperty.call(CUR,e.semilla)?CUR[e.semilla]:undefined;if(cur===null)return null;
+   return{e,c:[...new Set([cur,clean(words(e,"en")[0])].filter(Boolean))],es:clean(words(e,"es")[0])}}).filter(Boolean);
+  if(!plan.length){st("No hay palabras sin foto (las abstractas, como «dale» o «vos sos», se dejan sin foto a propósito).");btn.disabled=false;return}
+  st(`Buscando fotos para ${plan.length} palabras…`);const found={};
+  const r1=await wikiImages("en",[...new Set(plan.flatMap(x=>x.c))]);plan.forEach(x=>{for(const t of x.c)if(r1[t]){found[x.e.id]=r1[t];break}});
+  const rest=plan.filter(x=>!found[x.e.id]&&x.es);if(rest.length){const r2=await wikiImages("es",[...new Set(rest.map(x=>x.es))]);rest.forEach(x=>{if(r2[x.es])found[x.e.id]=r2[x.es]})}
+  const ids=Object.keys(found);st(`Encontré ${ids.length}. Buscando autores y licencias…`);
+  const cr=await wikiCredits([...new Set(ids.map(i=>found[i].file))]);let n=0;
+  for(const id of ids){const f=found[id],c=cr[f.file]||wikiFallback(f);const r=await sb.from("entradas").update({foto:f.url,foto_credito:c.credit,foto_fuente:c.src}).eq("id",id);if(!r.error)n++;st(`Guardando… ${n} de ${ids.length}`)}
+  await loadAll();st(`Listo: ${n} fotos nuevas.${plan.length-ids.length?` ${plan.length-ids.length} palabras se quedaron sin foto: podés buscarla a mano en «Editar».`:""}`)}
+ catch(err){st("No se pudo completar"+errText(err))}
+ btn.disabled=false}
+$("fillfotos").onclick=fillPhotos;
 
 // dictado
 const SRec=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -550,7 +608,7 @@ async function loadAll(){const[a,b,t]=await Promise.all([sb.from("entradas").sel
  TEMAS=t.data.map(x=>({id:x.id,nombre:str(x.nombre,40),orden:+x.orden||0}));
  ENT=a.data.map(v=>{const pw=v.palabras&&typeof v.palabras==="object"?v.palabras:{},fr=v.frases&&typeof v.frases==="object"?v.frases:{};const w={},f={};
   for(const l of LK){if(Array.isArray(pw[l]))w[l]=pw[l].filter(x=>typeof x==="string"&&x.trim()).map(x=>x.slice(0,120));if(typeof fr[l]==="string"&&fr[l].trim())f[l]=fr[l].slice(0,300)}
-  return{id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
+  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
  const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;
  loaded=true;render();if(FID)renderFicha();if(ME&&ME.admin)renderTemas();
  const m=location.hash.match(/^#p-(.+)$/);if(m&&!FID&&ENT.some(e=>e.id===m[1]))openFicha(m[1],false)}
