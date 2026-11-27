@@ -145,7 +145,13 @@ input.t,select.t{width:100%;font:16px Figtree,sans-serif;padding:10px 12px;min-h
 .ups{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
 .box .msg{text-align:center}
 /* panel */
-#admin{background:var(--panel)}
+#admin{background:var(--panel);min-height:60vh}
+.nav{display:flex;gap:4px;margin:-8px 0 22px;overflow-x:auto;padding-right:160px}
+.nav button{flex:none;border:0;border-radius:999px;background:transparent;color:#b9c0cd;padding:8px 16px;min-height:40px;font-weight:500;font-size:15px}
+.nav button:hover{color:#fff;background:#ffffff14}
+.nav button[aria-pressed=true]{background:#fff;color:#141925;font-weight:700}
+body.admview main,body.admview .search,body.admview .hint,body.admview #gate{display:none!important}
+@media(max-width:600px){.nav{padding-right:0;margin-top:0;gap:2px}.nav button{padding:8px 10px;font-size:14px}}
 h2{font:700 32px/1.05 Newsreader,Georgia,serif;margin:0 0 6px}
 .lead{color:var(--mute);margin:0 0 20px}
 .card{background:var(--bg);border-radius:14px;padding:16px 18px;margin-bottom:18px}
@@ -171,6 +177,12 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
   <div class="tabs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <div class="acct" id="acct"></div>
   <div class="wrap">
+    <nav class="nav" id="nav" aria-label="Secciones" hidden>
+      <button type="button" data-v="dic" aria-pressed="true">Diccionario</button>
+      <button type="button" data-v="aj" aria-pressed="false">Ajustes</button>
+      <button type="button" data-v="tem" aria-pressed="false">Temas</button>
+      <button type="button" data-v="per" aria-pressed="false">Personas</button>
+    </nav>
     <h1>Diccionario Jorgelina - Jordi</h1>
     <p class="sub"><b class="a">Castellano argentino</b> · <b class="e">castellano de España</b> · <b class="c">català</b> · <b class="g">English</b></p>
     <form class="search" id="sform" role="search">
@@ -200,22 +212,20 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
 
 <section class="band" id="admin" hidden>
   <div class="wrap">
-    <h2>Administración</h2>
-    <p class="lead">Solo lo ven quienes administran.</p>
-    <div class="card">
+    <div class="card" id="v-aj">
       <h3>Ajustes</h3>
       <label class="opt"><input type="radio" name="pub" value="1"> <span><b>App pública:</b> cualquiera con el enlace puede consultar y escuchar</span></label>
       <label class="opt"><input type="radio" name="pub" value="0"> <span><b>App privada:</b> solo las personas de la lista</span></label>
       <label class="opt mt"><input type="checkbox" id="ocstd"> <span>Ocultar la voz <b>Standard</b> en las palabras y frases que ya tienen una voz nuestra</span></label>
       <p class="msg" id="ajmsg" role="status"></p>
     </div>
-    <div class="card">
+    <div class="card" id="v-tem">
       <h3>Temas</h3>
       <div id="tlist"></div>
       <form id="tform" class="row mt"><input class="t" id="t-nom" placeholder="Nombre del tema nuevo" maxlength="40" required style="flex:1"><button class="btn">Añadir tema</button></form>
       <p class="msg" id="tmsg" role="status"></p>
     </div>
-    <div class="card">
+    <div class="card" id="v-per">
       <h3>Personas</h3>
       <div id="plist"></div>
       <form id="pform" class="mt">
@@ -547,7 +557,7 @@ async function loadAll(){const[a,b,t]=await Promise.all([sb.from("entradas").sel
 async function loadMe(){ME=null;
  if(session){const r=await sb.from("miembros").select("*").eq("email",(session.user.email||"").toLowerCase()).maybeSingle();
   if(r.data)ME={nombre:str(r.data.nombre,30),lenguas:Array.isArray(r.data.lenguas)?r.data.lenguas:[],admin:!!r.data.admin}}
- canWrite=!!ME;document.body.classList.toggle("nowrite",!canWrite);renderAcct();$("admin").hidden=!(ME&&ME.admin);if(ME&&ME.admin)loadPeople()}
+ canWrite=!!ME;document.body.classList.toggle("nowrite",!canWrite);renderAcct();const adm=!!(ME&&ME.admin);$("nav").hidden=!adm;if(!adm)setView("dic");if(adm)loadPeople()}
 async function loadAjustes(){const r=await sb.from("ajustes").select("*").eq("id",1).maybeSingle();
  AJ={publico:!(r.data&&r.data.publico===false),ocultar_standard:!(r.data&&r.data.ocultar_standard===false)};
  document.querySelectorAll("[name=pub]").forEach(x=>x.checked=(x.value==="1")===AJ.publico);$("ocstd").checked=AJ.ocultar_standard;gate()}
@@ -576,6 +586,12 @@ $("lform").onsubmit=async e=>{e.preventDefault();const email=$("lmail").value.tr
  catch(err){m="No se pudo conectar. Probá otra vez."}
  $("lsend").disabled=false;$("lmsg").textContent=m;if(!m)$("ldlg").hidden=true};
 
+// pestañas de administración
+let VIEW="dic";
+function setView(v){VIEW=v;document.querySelectorAll("#nav [data-v]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+ const adm=v!=="dic";$("admin").hidden=!adm;document.body.classList.toggle("admview",adm);["aj","tem","per"].forEach(k=>$("v-"+k).hidden=k!==v);
+ if(adm&&FID)closeFicha();if(v==="tem")renderTemas();if(v==="per")loadPeople()}
+$("nav").onclick=e=>{const b=e.target.closest("[data-v]");if(b)setView(b.dataset.v)};
 // administración: ajustes
 document.querySelectorAll("[name=pub]").forEach(x=>x.onchange=async()=>{const pub=x.value==="1";const r=await sb.from("ajustes").update({publico:pub}).eq("id",1);
  $("ajmsg").textContent=r.error?"No se pudo cambiar"+errText(r.error):pub?"Ahora la app es pública.":"Ahora la app es privada.";if(!r.error){AJ.publico=pub;gate()}});
