@@ -77,6 +77,11 @@ select.chip{padding-right:30px}
 .wl.no span{color:var(--mute);font-weight:500}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--es);flex:none;align-self:center}
 .lw{font:700 22px/1.2 Newsreader,Georgia,serif}
+.lb{display:flex;flex-direction:column;gap:4px}.lb .lw{font-size:20px}.lb .wl{font-size:16px}.lb .wl span{font-style:italic}
+.ftit{font:700 clamp(30px,4.5vw,44px)/1.05 Newsreader,Georgia,serif;margin:0 0 16px;text-align:center}
+.fx{font:600 italic clamp(19px,2.3vw,24px)/1.25 Newsreader,Georgia,serif;overflow-wrap:anywhere}
+.fsig{margin-top:auto;padding-top:8px;font-size:14px;color:var(--mute);line-height:1.35}.fsig b{color:var(--ink);font-weight:600}
+.sq.hasc .corner .fx+.vz{margin-bottom:10px}
 .lm{font-size:14px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .go{color:var(--mute);font-size:22px}
 .vt{position:relative;width:64px;height:48px;border-radius:10px;overflow:hidden;background:#141925;display:grid;place-items:center;flex:none}
@@ -371,7 +376,7 @@ const temaName=id=>{const t=TEMAS.find(t=>t.id===id);return t?t.nombre:"Sin tema
 const temaOrd=id=>{const t=TEMAS.find(t=>t.id===id);return t?t.orden:1e9};
 const sortLang=()=>S.scope==="all"?"es":S.scope;
 const headWord=(e,l)=>e.bloque==="locos"?e.palabra:(words(e,l)[0]||LK.map(k=>words(e,k)[0]).find(Boolean)||"");
-function keysOf(e){const ks=[];for(const l of LK){if(e.bloque==="locos"){if(e.palabra)ks.push(akey(l,e.palabra))}else words(e,l).forEach(w=>ks.push(akey(l,w)));if(e.frases[l])ks.push(fkey(l,e.id))}return ks}
+function keysOf(e){const ks=[];for(const l of LK){words(e,l).forEach(w=>ks.push(akey(l,w)));if(e.frases[l])ks.push(fkey(l,e.id))}return ks}
 const voicesOf=k=>VOC[k]||{};
 const hasMine=k=>Object.keys(voicesOf(k)).length>0;
 const CUR={"s000": "Bus", "s001": "Car", "s002": "Buenos Aires Underground", "s003": "Driving", "s004": "Parking", "s005": "Ticket (admission)", "s006": "Gasoline", "s007": "Road", "s008": "Sidewalk", "s009": "City block", "s010": "Bus stop", "s011": "Strawberry", "s012": "Peach", "s013": "Avocado", "s014": "Corn on the cob", "s015": "Pea", "s016": "Bean", "s017": "Green bean", "s018": "Potato", "s019": "Sweet potato", "s020": "Pumpkin", "s021": "Zucchini", "s022": "Pineapple", "s023": "Banana", "s024": "Grapefruit", "s025": "Butter", "s026": "Cream", "s027": "Bacon", "s028": "Popcorn", "s029": "Juice", "s030": "Cake", "s031": "Pastry", "s032": "Strawberries and cream", "s033": "T-shirt", "s034": "Skirt", "s035": "Jacket", "s036": "Sweatshirt", "s037": "Sneakers", "s038": "Sock", "s039": "Swimsuit", "s040": "Bra", "s041": "Glasses", "s042": "Refrigerator", "s043": "Tap (valve)", "s044": "Wardrobe", "s045": "Apartment", "s046": "Living room", "s047": "Swimming pool", "s048": "Kettle", "s049": "Baby bottle", "s050": "Adhesive bandage", "s051": "Suitcase", "s052": "Lighter", "s053": "Mobile phone", "s054": "Computer", "s055": "Ballpoint pen", "s056": "Postage stamp", "s057": "Nightclub", "s058": null, "s059": "Anger", "s060": null, "s061": null, "s062": null, "s063": null, "s064": null, "s065": null, "s066": null, "s067": null, "s068": null, "s069": null, "s070": null, "s071": null, "s072": "Money", "s073": null, "s074": null, "s075": "Laziness", "s076": "Anger", "s077": null, "s078": "Child", "s079": "Cigarette"};
@@ -385,7 +390,7 @@ function score(e,q){let best=0,hit=null;
   if(f===q||toks.includes(q))s=4;else if(f.startsWith(q))s=3;else if(toks.some(t=>t.startsWith(q)))s=2.5;else if(f.includes(q))s=2;else if(q.length>=4&&(lev(f,q)<=1||toks.some(t=>t.length>=4&&lev(t,q)<=1)))s=1;
   s*=bonus;if(s>best){best=s;hit=l}};
  if(e.bloque==="locos")test(e.palabra,null,1.1);
- for(const l of LK){if(S.scope!=="all"&&S.scope!==l)continue;words(e,l).forEach(w=>test(w,l,1));if(e.frases[l])test(e.frases[l],l,.5)}
+ for(const l of LK){if(S.scope!=="all"&&S.scope!==l)continue;words(e,l).forEach(w=>test(w,l,1));if(e.frases[l])test(e.frases[l],l,.5);if(e.sig[l])test(e.sig[l],l,.4)}
  return{s:best,hit}}
 
 // filtros y orden
@@ -405,8 +410,8 @@ function renderFilters(){
 function rowHTML(e){const f=fotoUrl(e.foto),hw=headWord(e,sortLang());
  const th=`<span class="th">${f?`<img src="${esc(fotoUrl(e.foto,true))}" alt="" loading="lazy">`:esc((hw||"?").charAt(0).toUpperCase())}</span>`;
  let mid;
- if(e.bloque==="locos")mid=`<span><span class="lw">${esc(e.palabra)}</span><span class="lm">${LANGS.filter(l=>words(e,l.k).length).map(l=>l.tag+": "+esc(words(e,l.k)[0])).join(" · ")}</span></span>`;
- else mid=`<span class="ws">${LANGS.map(l=>{const w=words(e,l.k),mine=w.some(x=>hasMine(akey(l.k,x)));return `<span class="wl ${l.k}${w.length?"":" no"}"><i>${l.tag}</i><span>${esc(w[0]||"—")}</span>${w.length>1?`<small>+${w.length-1}</small>`:""}${mine?'<b class="dot" title="Tiene voz nuestra"></b>':""}</span>`}).join("")}</span>`;
+ const ws=`<span class="ws">${LANGS.map(l=>{const w=words(e,l.k),mine=w.some(x=>hasMine(akey(l.k,x)));return `<span class="wl ${l.k}${w.length?"":" no"}"><i>${l.tag}</i><span>${esc(w[0]||"—")}</span>${w.length>1?`<small>+${w.length-1}</small>`:""}${mine?'<b class="dot" title="Tiene voz nuestra"></b>':""}</span>`}).join("")}</span>`;
+ mid=e.bloque==="locos"?`<span class="lb"><span class="lw">${esc(e.palabra)}</span>${ws}</span>`:ws;
  const pu=e.videoPoster?vidUrl(e.videoPoster):"";const vt=e.video?(pu?`<span class="vt" title="Tiene video"><img src="${esc(pu)}" alt="" loading="lazy"><b></b></span>`:`<span class="vt no" title="Tiene video"><b></b></span>`):"<span></span>";
  return `<button type="button" class="item" data-open="${esc(e.id)}">${th}${mid}${vt}<span class="go" aria-hidden="true">›</span></button>`}
 
@@ -442,15 +447,17 @@ function vbar(key,text,l){const vs=voicesOf(key),names=Object.keys(vs).sort((a,b
  const hideStd=AJ.ocultar_standard&&names.length>0,canRec=ME&&ME.lenguas.includes(l);
  return `<div class="vz">${names.map(n=>`<button type="button" class="vb mine" data-play="${esc(key)}" data-p="${esc(n)}" aria-label="Escuchar con la voz de ${esc(n)}">${SPK}<span>${esc(n)}</span></button>`).join("")}${hideStd?"":`<button type="button" class="vb std" data-say="${esc(text)}" data-l="${l}" aria-label="Escuchar con la voz Standard">${SPK}<span>Standard</span></button>`}${canRec?`<button type="button" class="rec" data-rec="${esc(key)}" data-w="${esc(text)}" data-l="${l}">${vs[ME.nombre]?"Cambiar mi voz":"Grabar mi voz"}</button>`:""}</div>`}
 function corner(e,l){const w=words(e,l.k),fr=e.frases[l.k];let h=`<div class="corner ${l.k}${S.target===l.k?" tgt":""}"><span class="tag">${l.tag} · ${l.n}</span>`;
- if(e.bloque==="locos"){h+=`<div class="fw">«${esc(e.palabra)}»</div>${vbar(akey(l.k,e.palabra),e.palabra,l.k)}`+(w.length?w.map(m=>`<div class="fm">${esc(m)}</div>`).join(""):`<div class="fm" style="color:var(--mute)">Sin significado anotado</div>`)}
- else if(w.length)h+=w.map(x=>`<div class="fw">${esc(x)}</div>${vbar(akey(l.k,x),x,l.k)}`).join("");
+ if(e.bloque==="locos"){h+=w.length?w.map(x=>`<div class="fx">${esc(x)}</div>${vbar(akey(l.k,x),x,l.k)}`).join(""):`<div class="fx" style="color:var(--mute)">—</div>`;
+  if(e.sig[l.k])h+=`<div class="fsig"><b>«${esc(e.palabra)}»</b> aquí: ${esc(e.sig[l.k])}</div>`;return h+"</div>"}
+ if(w.length)h+=w.map(x=>`<div class="fw">${esc(x)}</div>${vbar(akey(l.k,x),x,l.k)}`).join("");
  else h+=`<div class="fw" style="color:var(--mute)">—</div>`;
  if(fr)h+=`<div class="fr"><button type="button" class="frb" data-fr="${l.k}" aria-expanded="false">Ver frase</button><div hidden id="fr-${l.k}"><p class="frt">${esc(fr)}</p>${vbar(fkey(l.k,e.id),fr,l.k)}</div></div>`;
  return h+"</div>"}
 function renderFicha(){const e=ENT.find(x=>x.id===FID);if(!e){closeFicha();return}const f=fotoUrl(e.foto);
  const open=[...document.querySelectorAll("#fbox [data-fr][aria-expanded=true]")].map(b=>b.dataset.fr);
  const disc=f?`<img src="${esc(f)}" alt="">`:e.bloque==="locos"?`<span class="cw">${esc(e.palabra)}</span>`:`<span class="ph">${canWrite?"Sin foto · añadila con «Editar»":"Sin foto"}</span>`;
- $("fbox").innerHTML=`<div class="fh"><button type="button" class="btn ghost sm" id="fback">← Volver</button><span class="t">${e.bloque==="locos"?"Sinónimo loco":"Sinónimo puro"} · ${esc(temaName(e.temaId))}</span><div class="fact wonly"><button type="button" class="btn sm" id="fedit">Editar</button><button type="button" class="del" id="fdel">Eliminar</button></div></div>
+ const tit=e.bloque==="locos"&&f?`<h2 class="ftit">«${esc(e.palabra)}»</h2>`:"";
+ $("fbox").innerHTML=`<div class="fh"><button type="button" class="btn ghost sm" id="fback">← Volver</button><span class="t">${e.bloque==="locos"?"Sinónimo loco":"Sinónimo puro"} · ${esc(temaName(e.temaId))}</span><div class="fact wonly"><button type="button" class="btn sm" id="fedit">Editar</button><button type="button" class="del" id="fdel">Eliminar</button></div></div>${tit}
  <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${f&&e.fotoCred?`<p class="fcred">Foto: ${isUrl(e.fotoSrc)?`<a href="${esc(e.fotoSrc)}" target="_blank" rel="noopener">${esc(e.fotoCred)}</a>`:esc(e.fotoCred)}</p>`:""}${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}${videoHTML(e)}`;
  open.forEach(k=>toggleFrase(k,true));lazyPoster(e)}
 function toggleFrase(k,on){const b=document.querySelector(`#fbox [data-fr="${k}"]`),d=$("fr-"+k);if(!b||!d)return;on=on??d.hidden;d.hidden=!on;b.setAttribute("aria-expanded",on);b.textContent=on?"Ocultar frase":"Ver frase"}
@@ -522,14 +529,18 @@ $("rdel").onclick=async()=>{const k=R.k,p=R.p;$("rdel").disabled=true;
 // editar / añadir
 let EID=null,EB="puros",EFOTO=null,ENOFOTO=false,EWIKI=null,WRES=[];
 function wrow(l,w){return `<div class="fld"><input class="t ew" value="${esc(w)}" aria-label="Palabra"><button type="button" class="mic sm" data-l="${l}" aria-label="Dictar">${MIC}</button><button type="button" class="xw" aria-label="Quitar">×</button></div>`}
+const XPH={ar:"ej. la concha de tu madre",es:"ej. me cago en tu madre",ca:"ej. la mare que et va parir",en:"e.g. motherfucker"};
 function renderELangs(e){$("elangs").innerHTML=LANGS.map(l=>{const w=e?words(e,l.k):[];const list=w.length?w:[""];
- return `<fieldset class="el ${l.k}"><legend>${l.tag} · ${l.n}</legend><label>${EB==="locos"?"Qué significa allí":"Palabra"}</label><div class="wlist" data-l="${l.k}">${list.map(x=>wrow(l.k,x)).join("")}</div>
- <button type="button" class="addw" data-l="${l.k}">+ ${EB==="locos"?"otro significado":"otra palabra"}</button>
- <label class="mt">Frase de ejemplo</label><div class="fld"><input class="t ef" data-l="${l.k}" value="${esc(e?e.frases[l.k]||"":"")}" placeholder="${l.k==="en"?"An example sentence":"Una frase de ejemplo"}"><button type="button" class="mic sm" data-l="${l.k}" aria-label="Dictar frase">${MIC}</button></div></fieldset>`}).join("")}
-function setEB(b){EB=b;$("ebloque").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.b===b));$("ecentro").hidden=b!=="locos";
- $("ehelp").textContent=b==="locos"?"Una palabra que se dice igual pero significa cosas distintas según dónde. En cada idioma, anotá qué significa allí.":"La misma idea dicha en cada idioma. Podés poner más de una palabra por idioma.";
- document.querySelectorAll("#elangs label:first-of-type").forEach(x=>x.textContent=b==="locos"?"Qué significa allí":"Palabra");
- document.querySelectorAll("#elangs .addw").forEach(x=>x.textContent="+ "+(b==="locos"?"otro significado":"otra palabra"))}
+ return `<fieldset class="el ${l.k}"><legend>${l.tag} · ${l.n}</legend><label class="wl1">Palabra</label><div class="wlist" data-l="${l.k}">${list.map(x=>wrow(l.k,x)).join("")}</div>
+ <button type="button" class="addw" data-l="${l.k}">+ otra palabra</button>
+ <div class="opuros"><label class="mt">Frase de ejemplo</label><div class="fld"><input class="t ef" data-l="${l.k}" value="${esc(e?e.frases[l.k]||"":"")}" placeholder="${l.k==="en"?"An example sentence":"Una frase de ejemplo"}"><button type="button" class="mic sm" data-l="${l.k}" aria-label="Dictar frase">${MIC}</button></div></div>
+ <div class="olocos"><label class="mt">Qué significa la palabra allí (opcional)</label><input class="t es2" data-l="${l.k}" value="${esc(e?e.sig[l.k]||"":"")}" placeholder="ej. caparazón de un molusco"></div></fieldset>`}).join("")}
+function setEB(b){EB=b;const L=b==="locos";$("ebloque").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.b===b));$("ecentro").hidden=!L;
+ $("ehelp").textContent=L?"Una palabra que en cada sitio da lugar a expresiones distintas. Lo importante son las expresiones: anotá en cada idioma las que se dicen (y grabalas). Podés poner varias por idioma.":"La misma idea dicha en cada idioma. Podés poner más de una palabra por idioma.";
+ document.querySelectorAll("#elangs .wl1").forEach(x=>x.textContent=L?"Expresiones":"Palabra");
+ document.querySelectorAll("#elangs .addw").forEach(x=>x.textContent="+ "+(L?"otra expresión":"otra palabra"));
+ document.querySelectorAll("#elangs .opuros").forEach(x=>x.hidden=L);document.querySelectorAll("#elangs .olocos").forEach(x=>x.hidden=!L);
+ document.querySelectorAll("#elangs .ew").forEach(x=>{const l=x.closest(".wlist").dataset.l;x.placeholder=L?XPH[l]:"";x.setAttribute("aria-label",L?"Expresión":"Palabra")})}
 $("ebloque").onclick=e=>{const b=e.target.closest("[data-b]");if(b)setEB(b.dataset.b)};
 function renderEImg(url){$("e-img").innerHTML=url?`<img src="${esc(url)}" alt="Foto">`:`<span class="ph0" style="display:inline-block"></span>`;$("e-nofoto").hidden=!url}
 function openEdit(id,prefill){if(!canWrite)return openLogin();const e=id?ENT.find(x=>x.id===id):null;EID=id;EFOTO=null;ENOFOTO=false;EWIKI=null;WRES=[];$("e-wres").innerHTML="";const en0=e&&clean(words(e,"en")[0]);$("e-wq").value=e?(en0||clean(words(e,"es")[0])||e.palabra||""):(prefill||"");$("e-wl").value=e&&!en0?"es":"en";
@@ -548,21 +559,21 @@ $("e-file").onchange=async ev=>{const f=ev.target.files&&ev.target.files[0];ev.t
  try{EFOTO=await shrink(f);ENOFOTO=false;EWIKI=null;renderEImg(URL.createObjectURL(EFOTO));$("emsg").textContent=""}catch(e){$("emsg").textContent="No pude leer esa imagen. Probá con otra (jpg, png, heic desde el móvil…)."}};
 function shrink(file){return new Promise((ok,ko)=>{const u=URL.createObjectURL(file),img=new Image();img.onload=()=>{const M=900,s=Math.min(1,M/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ko(),"image/jpeg",.82)};img.onerror=()=>{URL.revokeObjectURL(u);ko()};img.src=u})}
 $("eform").onsubmit=async ev=>{ev.preventDefault();if(dTarget)dict.stop();const old=EID?ENT.find(x=>x.id===EID):null;
- const palabras={},frases={};for(const l of LK){const w=[...document.querySelectorAll(`#elangs .wlist[data-l="${l}"] .ew`)].map(i=>i.value.trim()).filter(Boolean);if(w.length)palabras[l]=[...new Set(w)];const f=document.querySelector(`#elangs .ef[data-l="${l}"]`).value.trim();if(f)frases[l]=f}
+ const palabras={},frases={},significados={};for(const l of LK){const w=[...document.querySelectorAll(`#elangs .wlist[data-l="${l}"] .ew`)].map(i=>i.value.trim()).filter(Boolean);if(w.length)palabras[l]=[...new Set(w)];const f=document.querySelector(`#elangs .ef[data-l="${l}"]`).value.trim();if(f&&EB==="puros")frases[l]=f;const g=document.querySelector(`#elangs .es2[data-l="${l}"]`).value.trim();if(g&&EB==="locos")significados[l]=g}
  const centro=$("e-centro").value.trim(),nl=Object.keys(palabras).length;
  if(EB==="locos"&&!centro){$("emsg").textContent="Escribí la palabra que cambia de significado.";return}
  if(EB==="puros"&&nl<2){$("emsg").textContent="Completá al menos dos idiomas.";return}
- if(EB==="locos"&&nl<1){$("emsg").textContent="Anotá qué significa en al menos un idioma.";return}
+ if(EB==="locos"&&nl<1){$("emsg").textContent="Anotá al menos una expresión.";return}
  $("esave").disabled=true;$("emsg").textContent="Guardando…";
  try{let tema=$("e-tema").value;
   if(tema==="__new"){const nom=$("e-tnom").value.trim();if(!nom)throw new Error("Falta el nombre del tema nuevo");const ex=TEMAS.find(t=>norm(t.nombre)===norm(nom));
    if(ex)tema=ex.id;else{const r=await sb.from("temas").insert({nombre:nom,orden:Math.max(0,...TEMAS.map(t=>t.orden))+10}).select("id").single();if(r.error)throw r.error;tema=r.data.id}}
-  const v={bloque:EB,palabra:EB==="locos"?centro:null,tema_id:tema?Number(tema):null,palabras,frases,nota:$("e-nota").value.trim()};
+  const v={bloque:EB,palabra:EB==="locos"?centro:null,tema_id:tema?Number(tema):null,palabras,frases,significados,formato:2,nota:$("e-nota").value.trim()};
   let id=EID;
   if(id){const r=await sb.from("entradas").update(v).eq("id",id);if(r.error)throw r.error}
   else{const r=await sb.from("entradas").insert(v).select("id").single();if(r.error)throw r.error;id=String(r.data.id)}
-  if(old){const mv=[];for(const l of LK){if(old.bloque==="locos"&&EB==="locos"&&old.palabra&&centro&&akey(l,old.palabra)!==akey(l,centro))mv.push([akey(l,old.palabra),akey(l,centro)]);
-    if(old.bloque==="puros"&&EB==="puros"){const a=words(old,l),b=palabras[l]||[];a.forEach((w,i)=>{if(b[i]&&!b.includes(w)&&akey(l,w)!==akey(l,b[i]))mv.push([akey(l,w),akey(l,b[i])])})}}
+  if(old){const mv=[];for(const l of LK){
+    if(old.bloque===EB){const a=words(old,l),b=palabras[l]||[];a.forEach((w,i)=>{if(b[i]&&!b.includes(w)&&akey(l,w)!==akey(l,b[i]))mv.push([akey(l,w),akey(l,b[i])])})}}
    for(const[a,b]of mv)if(hasMine(a))await sb.rpc("mover_voces",{vieja:a,nueva:b})}
   const dropOld=()=>{if(old&&old.foto&&!isUrl(old.foto))sb.storage.from("fotos").remove([old.foto])};
   if(EFOTO){const path=id+"-"+Date.now()+".jpg";const up=await sb.storage.from("fotos").upload(path,EFOTO,{contentType:"image/jpeg"});if(up.error)throw up.error;
@@ -714,7 +725,7 @@ async function loadAll(){const[a,b,t]=await Promise.all([sb.from("entradas").sel
  TEMAS=t.data.map(x=>({id:x.id,nombre:str(x.nombre,40),orden:+x.orden||0}));
  ENT=a.data.map(v=>{const pw=v.palabras&&typeof v.palabras==="object"?v.palabras:{},fr=v.frases&&typeof v.frases==="object"?v.frases:{};const w={},f={};
   for(const l of LK){if(Array.isArray(pw[l]))w[l]=pw[l].filter(x=>typeof x==="string"&&x.trim()).map(x=>x.slice(0,120));if(typeof fr[l]==="string"&&fr[l].trim())f[l]=fr[l].slice(0,300)}
-  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),video:str(v.video,200),videoPoster:str(v.video_poster,220),videoPor:str(v.video_por,30),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
+  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),sig:(()=>{const o={},g=v.significados&&typeof v.significados==="object"?v.significados:{};for(const l of LK)if(typeof g[l]==="string"&&g[l].trim())o[l]=g[l].slice(0,300);return o})(),video:str(v.video,200),videoPoster:str(v.video_poster,220),videoPor:str(v.video_por,30),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
  const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;
  loaded=true;render();if(FID)renderFicha();if(ME&&ME.admin)renderTemas();
  const m=location.hash.match(/^#p-(.+)$/);if(m&&!FID&&ENT.some(e=>e.id===m[1]))openFicha(m[1],false)}
