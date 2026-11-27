@@ -32,7 +32,7 @@ h1{font:700 clamp(32px,5vw,50px)/1.05 Newsreader,Georgia,serif;margin:0 0 6px;te
 .sub{margin:0 0 22px;color:#b9c0cd;font-size:17px}
 .sub b{font-weight:500}.sub .a{color:#9ccbf2}.sub .e{color:#ff8a98}.sub .c{color:#f6cf4a}.sub .g{color:#79dcab}
 .acct{position:absolute;top:14px;right:max(5vw,40px);display:flex;gap:10px;align-items:center;font-size:14px;color:#b9c0cd}
-.acct button{border:1px solid #ffffff40;background:transparent;color:#fff;border-radius:999px;padding:6px 14px;min-height:36px}
+.acct{flex-wrap:wrap;justify-content:flex-end}.acct button{border:1px solid #ffffff40;background:transparent;color:#fff;border-radius:999px;padding:6px 14px;min-height:36px}
 .search{display:flex;gap:10px;background:#fff;border-radius:14px;padding:8px;box-shadow:0 10px 30px #0006;max-width:860px}
 .search input{flex:1;border:0;outline:0;font:500 clamp(18px,2.4vw,22px) Figtree,sans-serif;padding:8px 10px;color:#141925;background:transparent}
 .search input::placeholder{color:#8a91a0}
@@ -190,6 +190,7 @@ h2{font:700 32px/1.05 Newsreader,Georgia,serif;margin:0 0 6px}
 .opt{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin:6px 0}.opt input{margin-top:5px;width:18px;height:18px;flex:none}
 .prow,.trow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.5fr) auto auto;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
 .trow{grid-template-columns:minmax(0,1fr) auto auto}
+.pacc{grid-column:1/-1;font-size:13px;color:var(--mute);margin-top:-4px}.pwbox{grid-column:1/-1;background:var(--panel);border-radius:10px;padding:10px 12px}.pwbox .fld{flex-wrap:wrap}.pwbox .pwi{flex:1;min-width:160px;font-family:ui-monospace,monospace}
 .pn small{display:block;color:var(--mute);font-size:13px;margin-top:4px;overflow-wrap:anywhere}
 .ck{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
 .ckl{display:inline-flex;gap:6px;align-items:center;font-weight:400;margin:0;min-height:36px}.ckl input{width:18px;height:18px}
@@ -270,7 +271,7 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
         <div class="row mt"><span class="lbl">Graba en</span><span class="ck" id="p-langs"></span><label class="ckl"><input type="checkbox" id="p-adm"> Administra</label><button class="btn">Añadir persona</button></div>
       </form>
       <p class="msg" id="pmsg" role="status"></p>
-      <p class="note">La persona nueva abre la app, toca «Entrar → Primera vez» con ese email y elige su contraseña. Si olvida la contraseña, borrá su usuario en Supabase (Authentication → Users) y que vuelva a hacer «Primera vez».</p>
+      <p class="note">La persona nueva abre la app, toca «Entrar → Primera vez» con ese email y elige su contraseña. Si la olvida, puede pedir una nueva con «¿Olvidaste tu contraseña?», o podés ponerle una desde aquí con «Nueva contraseña». Las contraseñas no se pueden ver: nadie las guarda, solo se pueden cambiar.</p>
     </div>
   </div>
 </section>
@@ -298,6 +299,18 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
   </div>
 </div>
 
+<div class="dlg" id="npdlg" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="npt">
+    <h3 id="npt">Elegí tu contraseña nueva</h3>
+    <p>Mínimo 6 caracteres.</p>
+    <form id="npform">
+      <label for="np1">Contraseña nueva</label><input class="t" id="np1" type="password" minlength="6" autocomplete="new-password" required>
+      <label for="np2" class="mt">Repetila</label><input class="t" id="np2" type="password" minlength="6" autocomplete="new-password" required>
+      <p class="msg" id="npmsg" role="status"></p>
+      <div class="row end"><button type="button" class="btn ghost" id="npcancel">Cancelar</button><button class="btn" id="npsend">Guardar contraseña</button></div>
+    </form>
+  </div>
+</div>
 <div class="dlg" id="ldlg" hidden>
   <div class="box" role="dialog" aria-modal="true" aria-labelledby="lt">
     <h3 id="lt">Entrar</h3>
@@ -305,7 +318,8 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
     <p id="lhelp"></p>
     <form id="lform">
       <label for="lmail">Email</label><input class="t" id="lmail" type="email" placeholder="tu@email.com" autocomplete="email" required>
-      <label for="lpass" class="mt">Contraseña</label><input class="t" id="lpass" type="password" minlength="6" autocomplete="current-password" required>
+      <div id="lpwrap"><label for="lpass" class="mt">Contraseña</label><input class="t" id="lpass" type="password" minlength="6" autocomplete="current-password" required></div>
+      <button type="button" class="addw" id="lforgot">¿Olvidaste tu contraseña?</button>
       <p class="msg" id="lmsg" role="status"></p>
       <div class="row end"><button type="button" class="btn ghost" id="lcancel">Cancelar</button><button class="btn" id="lsend">Entrar</button></div>
     </form>
@@ -738,21 +752,32 @@ async function loadAjustes(){const r=await sb.from("ajustes").select("*").eq("id
  document.querySelectorAll("[name=pub]").forEach(x=>x.checked=(x.value==="1")===AJ.publico);$("ocstd").checked=AJ.ocultar_standard;gate()}
 function gate(){document.body.classList.toggle("closed",!!sb&&!AJ.publico&&!ME)}
 function renderAcct(){const a=$("acct");a.textContent="";if(!sb)return;
- if(session){const s=document.createElement("span");s.textContent=ME?ME.nombre:(session.user.email||"")+" · sin alta en el diccionario";const b=document.createElement("button");b.textContent="Salir";b.onclick=()=>sb.auth.signOut();a.append(s,b)}
+ if(session){const s=document.createElement("span");s.textContent=ME?ME.nombre:(session.user.email||"")+" · sin alta en el diccionario";const c=document.createElement("button");c.textContent="Cambiar contraseña";c.onclick=openNewPass;const b=document.createElement("button");b.textContent="Salir";b.onclick=()=>sb.auth.signOut();a.append(s,c,b)}
  else{const b=document.createElement("button");b.textContent="Entrar";b.onclick=openLogin;a.append(b)}}
 
 // login
 let LM="in";
 function setLM(m){LM=m;document.querySelectorAll("[data-lm]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lm===m));
- $("lhelp").textContent=m==="in"?"Entrá con tu email y tu contraseña.":"Si te dieron de alta, elegí aquí tu contraseña (mínimo 6 caracteres).";
- $("lsend").textContent=m==="in"?"Entrar":"Crear mi contraseña";$("lpass").autocomplete=m==="in"?"current-password":"new-password";$("lmsg").textContent=""}
+ $("lhelp").textContent=m==="in"?"Entrá con tu email y tu contraseña.":m==="up"?"Si te dieron de alta, elegí aquí tu contraseña (mínimo 6 caracteres).":"Escribí tu email y te mandamos un enlace para elegir una contraseña nueva. Abrilo en este mismo dispositivo.";
+ $("lsend").textContent=m==="in"?"Entrar":m==="up"?"Crear mi contraseña":"Enviarme el enlace";$("lpass").autocomplete=m==="in"?"current-password":"new-password";
+ $("lpwrap").hidden=m==="reset";$("lpass").required=m!=="reset";$("lforgot").hidden=m!=="in";$("lmsg").textContent=""}
+$("lforgot").onclick=()=>{setLM("reset");$("lmail").focus()};
 function openLogin(){if(!sb)return;$("ldlg").hidden=false;setLM("in");$("lmail").focus()}
 $("lseg").onclick=e=>{const b=e.target.closest("[data-lm]");if(b)setLM(b.dataset.lm)};
 $("lcancel").onclick=()=>$("ldlg").hidden=true;
 document.querySelectorAll("[data-login]").forEach(b=>b.onclick=openLogin);
-$("lform").onsubmit=async e=>{e.preventDefault();const email=$("lmail").value.trim().toLowerCase(),password=$("lpass").value;if(!email||!password)return;
- $("lsend").disabled=true;$("lmsg").textContent=LM==="in"?"Entrando…":"Creando…";let m="";
- try{if(LM==="in"){const r=await sb.auth.signInWithPassword({email,password});if(r.error)m="Email o contraseña incorrectos. ¿Es tu primera vez? Usá «Primera vez»."}
+function openNewPass(){$("npdlg").hidden=false;$("npmsg").textContent="";$("npform").reset();$("np1").focus()}
+$("npcancel").onclick=()=>$("npdlg").hidden=true;
+$("npform").onsubmit=async e=>{e.preventDefault();const a=$("np1").value,b=$("np2").value;if(a!==b){$("npmsg").textContent="Las dos no coinciden.";return}
+ $("npsend").disabled=true;$("npmsg").textContent="Guardando…";const r=await sb.auth.updateUser({password:a});$("npsend").disabled=false;
+ if(r.error){$("npmsg").textContent=/same|different/i.test(r.error.message)?"Es igual a la anterior: elegí otra.":"No se pudo cambiar: "+r.error.message;return}
+ $("npmsg").textContent="Contraseña cambiada. Ya estás dentro.";setTimeout(()=>$("npdlg").hidden=true,1500)};
+$("lform").onsubmit=async e=>{e.preventDefault();const email=$("lmail").value.trim().toLowerCase(),password=$("lpass").value;if(!email||(!password&&LM!=="reset"))return;
+ $("lsend").disabled=true;$("lmsg").textContent=LM==="in"?"Entrando…":LM==="up"?"Creando…":"Enviando…";let m="";
+ try{if(LM==="reset"){const r=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+   m=r.error?(/rate|limit|seconds/i.test(r.error.message)?"Ya pediste un enlace hace poco: esperá unos minutos y probá otra vez.":"No se pudo enviar: "+r.error.message):"Listo. Si ese email está dado de alta, en unos minutos te llega un enlace (mirá también en «Spam»).";
+   $("lsend").disabled=false;$("lmsg").textContent=m;return}
+  if(LM==="in"){const r=await sb.auth.signInWithPassword({email,password});if(r.error)m="Email o contraseña incorrectos. ¿Es tu primera vez? Usá «Primera vez»."}
   else{const inv=await sb.rpc("email_invitado",{e:email});
    if(inv.error||!inv.data)m="Ese email no está dado de alta. Pedile a quien administra el diccionario que te añada.";
    else{const r=await sb.auth.signUp({email,password});
@@ -788,13 +813,20 @@ $("tform").onsubmit=async e=>{e.preventDefault();const nombre=$("t-nom").value.t
 // personas
 const LCK=(name,on,dis)=>LANGS.map(l=>`<label class="ckl"><input type="checkbox" name="${name}" value="${l.k}"${on.includes(l.k)?" checked":""}${dis?" disabled":""}> ${l.tag}</label>`).join("");
 $("p-langs").innerHTML=LCK("nl",[]);
-async function loadPeople(){const r=await sb.from("miembros").select("*").order("nombre");if(r.error)return;PEOPLE=r.data;renderPeople()}
+let CUENTAS={};
+async function loadPeople(){const[r,c]=await Promise.all([sb.from("miembros").select("*").order("nombre"),sb.rpc("admin_cuentas")]);if(r.error)return;PEOPLE=r.data;
+ CUENTAS={};if(!c.error&&Array.isArray(c.data))c.data.forEach(x=>{if(x&&x.correo)CUENTAS[String(x.correo).toLowerCase()]=x});renderPeople()}
+const fdate=d=>{const t=Date.parse(d);return isNaN(t)?"":new Date(t).toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"})};
+const PW=["luna","mate","faro","tango","gato","rambla","nube","pampa","ola","fideo","bici","sol","coral","menta","vino","tren","bosque","limon","farol","pino","alfajor","sardana","rio","mar"];
+function genPass(){const a=new Uint32Array(3);crypto.getRandomValues(a);return PW[a[0]%PW.length]+"-"+PW[a[1]%PW.length]+"-"+String(10+a[2]%90)}
 function renderPeople(){const me=(session&&session.user.email||"").toLowerCase();
  $("plist").innerHTML=PEOPLE.map(p=>{const self=p.email===me,L=Array.isArray(p.lenguas)?p.lenguas:[];return `<div class="prow" data-email="${esc(p.email)}" data-old="${esc(p.nombre)}">
   <div class="pn"><input class="t" value="${esc(p.nombre)}" maxlength="30" aria-label="Nombre"><small>${esc(p.email)}${self?" · vos":""}</small></div>
   <div class="ck"><span class="lbl">Graba en</span>${LCK("l",L)}</div>
   <label class="ckl"><input type="checkbox" name="adm"${p.admin?" checked":""}${self?" disabled":""}> Administra</label>
-  <div class="pact"><button type="button" class="btn ghost sm" data-psave>Guardar</button>${self?"":`<button type="button" class="del" data-pdel>Quitar</button>`}</div></div>`}).join("")||'<p class="msg">Todavía no hay nadie.</p>'}
+  <div class="pact"><button type="button" class="btn ghost sm" data-psave>Guardar</button><button type="button" class="btn ghost sm" data-pw>Nueva contraseña</button>${self?"":`<button type="button" class="del" data-pdel>Quitar</button>`}</div>
+  <div class="pacc">${(()=>{const c=CUENTAS[String(p.email).toLowerCase()];return c?`Cuenta creada el ${esc(fdate(c.creada))}${c.ultimo_acceso?` · último acceso: ${esc(fdate(c.ultimo_acceso))}`:" · todavía no entró"}`:"Todavía no creó su cuenta (tiene que entrar con «Primera vez»)"})()}</div>
+  <div class="pwbox" hidden><label>Contraseña nueva para ${esc(p.nombre)}</label><div class="fld"><input class="t pwi" maxlength="60" autocomplete="off"><button type="button" class="btn ghost sm" data-pgen>Generar otra</button><button type="button" class="btn sm" data-pset>Guardar contraseña</button></div><p class="msg pwmsg" role="status"></p></div></div>`}).join("")||'<p class="msg">Todavía no hay nadie.</p>'}
 const pmsg=t=>$("pmsg").textContent=t;
 $("plist").onclick=async e=>{const row=e.target.closest(".prow");if(!row)return;const email=row.dataset.email,old=row.dataset.old;
  if(e.target.closest("[data-psave]")){const nombre=row.querySelector(".pn input").value.trim(),lenguas=[...row.querySelectorAll("[name=l]:checked")].map(x=>x.value),adm=row.querySelector("[name=adm]");
@@ -803,6 +835,14 @@ $("plist").onclick=async e=>{const row=e.target.closest(".prow");if(!row)return;
   if(r.error)return pmsg(/duplicate|unique/i.test(r.error.message)?"Ya hay otra persona con ese nombre.":"No se pudo guardar"+errText(r.error));
   if(nombre!==old)await sb.from("voces").update({persona:nombre}).eq("persona",old);
   pmsg("Guardado.");await loadPeople();await loadMe();await loadAll()}
+ if(e.target.closest("[data-pw]")){const box=row.querySelector(".pwbox");box.hidden=!box.hidden;if(!box.hidden){const i=box.querySelector(".pwi");if(!i.value)i.value=genPass();i.focus();i.select()}return}
+ if(e.target.closest("[data-pgen]")){row.querySelector(".pwi").value=genPass();return}
+ if(e.target.closest("[data-pcopy]")){const t=e.target.closest("[data-pcopy]").dataset.pcopy;try{await navigator.clipboard.writeText(t);e.target.closest("[data-pcopy]").textContent="Copiado"}catch(x){}return}
+ if(e.target.closest("[data-pset]")){const pw=row.querySelector(".pwi").value.trim(),out=row.querySelector(".pwmsg");if(pw.length<6){out.textContent="Mínimo 6 caracteres.";return}
+  out.textContent="Guardando…";const r=await sb.rpc("admin_poner_contrasena",{e:email,nueva:pw});
+  if(r.error){out.textContent="No se pudo cambiar"+errText(r.error);return}
+  if(r.data==="sin_cuenta"){out.textContent=`${old} todavía no creó su cuenta: que entre con «Primera vez» y elija la suya.`;return}
+  out.innerHTML=`Listo. La contraseña de ${esc(old)} ahora es <b>${esc(pw)}</b>. Pasásela y que la cambie si quiere. <button type="button" class="addw" data-pcopy="${esc(pw)}">Copiar</button>`;return}
  if(e.target.closest("[data-pdel]")){if(!window.confirm(`¿Quitar a ${old}? Ya no podrá entrar ni grabar. Sus grabaciones se mantienen.`))return;
   const r=await sb.from("miembros").delete().eq("email",email);pmsg(r.error?"No se pudo quitar"+errText(r.error):`${old} ya no tiene acceso.`);loadPeople()}};
 $("pform").onsubmit=async e=>{e.preventDefault();const nombre=$("p-nom").value.trim(),email=$("p-mail").value.trim().toLowerCase(),lenguas=[...$("pform").querySelectorAll("[name=nl]:checked")].map(x=>x.value),admin=$("p-adm").checked;
@@ -815,7 +855,7 @@ document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("vdlg")
 
 // arranque
 if(configured&&window.supabase){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
- sb.auth.onAuthStateChange((ev,s)=>{session=s;setTimeout(async()=>{await loadMe();await loadAjustes();await loadAll()},0)});
+ sb.auth.onAuthStateChange((ev,s)=>{session=s;if(ev==="PASSWORD_RECOVERY")setTimeout(openNewPass,300);setTimeout(async()=>{await loadMe();await loadAjustes();await loadAll()},0)});
  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&$("edlg").hidden&&$("dlg").hidden&&$("vdlg").hidden)loadAll()})}
 else amsg("Falta configurar Supabase en el archivo.");
 }
