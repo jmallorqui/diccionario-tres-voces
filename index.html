@@ -135,6 +135,8 @@ body.nospeak .vb.std{display:none}
 .vstage video{width:100%;max-height:58vh;display:block;object-fit:contain}
 .vbar{height:6px;border-radius:3px;background:var(--panel);overflow:hidden;margin:10px 0 0}.vbar i{display:block;height:100%;width:0;background:var(--es);transition:width .3s}
 .rdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#fff;margin-right:8px;vertical-align:middle}
+.upd{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));translate:-50% 0;z-index:50;display:flex;gap:12px;align-items:center;background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 10px 10px 16px;box-shadow:0 10px 30px #0006;width:max-content;max-width:calc(100% - 24px)}
+.upd .btn{background:var(--bg);color:var(--ink)}
 .wsrch{margin-top:14px}.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-top:8px}
 .wpick{border:2px solid transparent;background:var(--panel);border-radius:12px;padding:4px;color:var(--ink);font-size:12px;text-align:center}
 .wpick:hover,.wpick:focus-visible{border-color:var(--ar)}
@@ -276,6 +278,7 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
   </div>
 </section>
 
+<div class="upd" id="upd" role="status" hidden><span>Hay una versión nueva de la app</span><button type="button" class="btn sm" id="updbtn">Actualizar</button></div>
 <div class="ficha" id="ficha" hidden><div class="fbox" role="dialog" aria-modal="true" aria-label="Ficha de la palabra" id="fbox"></div></div>
 
 <div class="dlg" id="edlg" hidden>
@@ -364,6 +367,7 @@ body.nowrite .rec,body.nowrite .wonly{display:none!important}
 
 <script>
 {
+const APPV="2026-11-27-v7";
 // ▼▼▼ DATOS DE SUPABASE ▼▼▼
 const SUPABASE_URL="https://vdklrwxlensglcqoxwgd.supabase.co";
 const SUPABASE_KEY="sb_publishable_e_0ms8z5WWP4ZlOeqelFQw_4g9c6j_q";
@@ -853,6 +857,10 @@ $("pform").onsubmit=async e=>{e.preventDefault();const nombre=$("p-nom").value.t
 
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("vdlg").hidden)return closeVid();if(!$("dlg").hidden)return closeRec();if(!$("edlg").hidden)return $("edlg").hidden=true;if(!$("ldlg").hidden)return $("ldlg").hidden=true;if(FID)closeFicha()});
 
+// aviso de versión nueva
+async function checkVersion(){try{const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store"});if(!r.ok)return;const t=await r.text(),m=t.match(/const APPV="([^"]+)"/);if(m&&m[1]!==APPV)$("upd").hidden=false}catch(e){}}
+$("updbtn").onclick=()=>location.reload();
+setTimeout(checkVersion,4000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkVersion()});
 // arranque
 if(configured&&window.supabase){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
  sb.auth.onAuthStateChange((ev,s)=>{session=s;if(ev==="PASSWORD_RECOVERY")setTimeout(openNewPass,300);setTimeout(async()=>{await loadMe();await loadAjustes();await loadAll()},0)});
