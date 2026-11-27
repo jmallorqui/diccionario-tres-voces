@@ -64,7 +64,7 @@ select.chip{padding-right:30px}
 .gh{font:700 22px/1.2 Newsreader,Georgia,serif;margin:26px 0 4px;display:flex;gap:10px;align-items:baseline}
 .gh small{font:400 14px Figtree,sans-serif;color:var(--mute)}
 .list{display:flex;flex-direction:column}
-.item{display:grid;grid-template-columns:48px minmax(0,1fr) 24px;gap:14px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);padding:12px 4px}
+.item{display:grid;grid-template-columns:48px minmax(0,1fr) 64px 24px;gap:14px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);padding:12px 4px}
 .item:hover{background:var(--panel)}
 .th{width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--panel);display:grid;place-items:center;font:700 20px Newsreader,serif;color:var(--mute)}
 .th img{width:100%;height:100%;object-fit:cover}
@@ -79,8 +79,13 @@ select.chip{padding-right:30px}
 .lw{font:700 22px/1.2 Newsreader,Georgia,serif}
 .lm{font-size:14px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .go{color:var(--mute);font-size:22px}
+.vt{position:relative;width:64px;height:48px;border-radius:10px;overflow:hidden;background:#141925;display:grid;place-items:center;flex:none}
+.vt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vt b{position:relative;width:24px;height:24px;border-radius:50%;background:#fffe;display:grid;place-items:center;box-shadow:0 1px 4px #0006}
+.vt b::before{content:"";margin-left:3px;border-left:9px solid #141925;border-top:6px solid transparent;border-bottom:6px solid transparent}
+@media(max-width:760px){.vt{width:48px;height:40px}}
 .empty{padding:28px 0;color:var(--mute)}
-@media(max-width:760px){.ws{grid-template-columns:repeat(2,minmax(0,1fr))}.item{grid-template-columns:44px minmax(0,1fr) 16px;gap:10px}.th{width:44px;height:44px}}
+@media(max-width:760px){.ws{grid-template-columns:repeat(2,minmax(0,1fr))}.item{grid-template-columns:44px minmax(0,1fr) 48px 16px;gap:10px}.th{width:44px;height:44px}}
 /* ficha */
 .ficha{position:fixed;inset:0;background:#0009;z-index:20;overflow:auto;padding:max(2vw,0px)}
 .fbox{background:var(--bg);max-width:1000px;margin:4vh auto;border-radius:18px;padding:clamp(16px,3vw,32px)}
@@ -402,7 +407,8 @@ function rowHTML(e){const f=fotoUrl(e.foto),hw=headWord(e,sortLang());
  let mid;
  if(e.bloque==="locos")mid=`<span><span class="lw">${esc(e.palabra)}</span><span class="lm">${LANGS.filter(l=>words(e,l.k).length).map(l=>l.tag+": "+esc(words(e,l.k)[0])).join(" · ")}</span></span>`;
  else mid=`<span class="ws">${LANGS.map(l=>{const w=words(e,l.k),mine=w.some(x=>hasMine(akey(l.k,x)));return `<span class="wl ${l.k}${w.length?"":" no"}"><i>${l.tag}</i><span>${esc(w[0]||"—")}</span>${w.length>1?`<small>+${w.length-1}</small>`:""}${mine?'<b class="dot" title="Tiene voz nuestra"></b>':""}</span>`}).join("")}</span>`;
- return `<button type="button" class="item" data-open="${esc(e.id)}">${th}${mid}<span class="go" aria-hidden="true">›</span></button>`}
+ const pu=e.videoPoster?vidUrl(e.videoPoster):"";const vt=e.video?(pu?`<span class="vt" title="Tiene video"><img src="${esc(pu)}" alt="" loading="lazy"><b></b></span>`:`<span class="vt no" title="Tiene video"><b></b></span>`):"<span></span>";
+ return `<button type="button" class="item" data-open="${esc(e.id)}">${th}${mid}${vt}<span class="go" aria-hidden="true">›</span></button>`}
 
 function render(){if(!loaded)return;renderFilters();const q=norm(S.q);
  let rows=ENT.filter(e=>e.bloque===S.bloque&&(S.tema==="all"||(S.tema==="none"?!e.temaId:String(e.temaId)===S.tema)));
@@ -446,7 +452,7 @@ function renderFicha(){const e=ENT.find(x=>x.id===FID);if(!e){closeFicha();retur
  const disc=f?`<img src="${esc(f)}" alt="">`:e.bloque==="locos"?`<span class="cw">${esc(e.palabra)}</span>`:`<span class="ph">${canWrite?"Sin foto · añadila con «Editar»":"Sin foto"}</span>`;
  $("fbox").innerHTML=`<div class="fh"><button type="button" class="btn ghost sm" id="fback">← Volver</button><span class="t">${e.bloque==="locos"?"Sinónimo loco":"Sinónimo puro"} · ${esc(temaName(e.temaId))}</span><div class="fact wonly"><button type="button" class="btn sm" id="fedit">Editar</button><button type="button" class="del" id="fdel">Eliminar</button></div></div>
  <div class="sq hasc">${LANGS.map(l=>corner(e,l)).join("")}<div class="center"><div class="disc">${disc}</div></div></div>${f&&e.fotoCred?`<p class="fcred">Foto: ${isUrl(e.fotoSrc)?`<a href="${esc(e.fotoSrc)}" target="_blank" rel="noopener">${esc(e.fotoCred)}</a>`:esc(e.fotoCred)}</p>`:""}${e.nota?`<p class="fnota">${esc(e.nota)}</p>`:""}${videoHTML(e)}`;
- open.forEach(k=>toggleFrase(k,true))}
+ open.forEach(k=>toggleFrase(k,true));lazyPoster(e)}
 function toggleFrase(k,on){const b=document.querySelector(`#fbox [data-fr="${k}"]`),d=$("fr-"+k);if(!b||!d)return;on=on??d.hidden;d.hidden=!on;b.setAttribute("aria-expanded",on);b.textContent=on?"Ocultar frase":"Ver frase"}
 function openFicha(id,push=true){FID=id;renderFicha();$("ficha").hidden=false;document.body.style.overflow="hidden";if(push&&location.hash!=="#p-"+id)history.pushState({f:id},"","#p-"+id);setTimeout(()=>{const b=$("fback");b&&b.focus()},0)}
 function closeFicha(fromPop){FID=null;$("ficha").hidden=true;document.body.style.overflow="";stopAll();if(!fromPop&&location.hash.startsWith("#p-")){if(history.state&&history.state.f)history.back();else history.replaceState(null,"",location.pathname)}}
@@ -569,7 +575,7 @@ $("eform").onsubmit=async ev=>{ev.preventDefault();if(dTarget)dict.stop();const 
  $("esave").disabled=false};
 async function delEntry(id){const e=ENT.find(x=>x.id===id);if(!e)return;if(!window.confirm(`¿Eliminar «${headWord(e,"es")}» del diccionario?`))return;
  const r=await sb.from("entradas").delete().eq("id",id);if(r.error){alert("No se pudo eliminar"+errText(r.error));return}
- if(e.foto&&!isUrl(e.foto))sb.storage.from("fotos").remove([e.foto]);if(e.video)sb.storage.from("videos").remove([e.video]);closeFicha();await loadAll()}
+ if(e.foto&&!isUrl(e.foto))sb.storage.from("fotos").remove([e.foto]);if(e.video)sb.storage.from("videos").remove([e.video,e.videoPoster].filter(Boolean));closeFicha();await loadAll()}
 
 // fotos de Wikipedia
 const clean=w=>String(w||"").replace(/\(.*?\)/g,"").replace(/^to /i,"").split("/")[0].trim();
@@ -618,7 +624,7 @@ const MAXV=60;
 const VMT=(()=>{if(!window.MediaRecorder)return "";for(const t of["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4;codecs=avc1,mp4a","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"])try{if(MediaRecorder.isTypeSupported(t))return t}catch(e){}return ""})();
 const vidUrl=p=>{if(!sb||!p)return "";const u=sb.storage.from("videos").getPublicUrl(p).data.publicUrl;return typeof u==="string"&&u.startsWith("https://")?u:""};
 function videoHTML(e){const u=vidUrl(e.video);let h='<div class="fvid">';
- if(u)h+=`<video controls playsinline preload="metadata" src="${esc(u)}#t=0.1"></video>${e.videoPor?`<p class="fcred">Video de ${esc(e.videoPor)}</p>`:""}`;
+ if(u)h+=`<video controls playsinline preload="metadata" crossorigin="anonymous" data-poster-for="${esc(e.id)}" src="${esc(u)}#t=0.1"></video>${e.videoPor?`<p class="fcred">Video de ${esc(e.videoPor)}</p>`:""}`;
  if(canWrite)h+=`<div class="row wonly"><button type="button" class="btn ${u?"ghost ":""}sm" data-vid>${u?"Cambiar video":"Añadir video"}</button>${u?'<button type="button" class="del" data-vdel>Quitar video</button>':""}</div>`;
  return h+"</div>"}
 const V={stream:null,facing:"user",mr:null,timer:null,blob:null,file:null,busy:false};
@@ -664,12 +670,22 @@ async function transcode(file,prog){const url=URL.createObjectURL(file),v=docume
 $("vsave").onclick=async()=>{const e=ENT.find(x=>x.id===FID);if(!V.blob||!e)return;$("vsave").disabled=true;vmsg("Subiendo video…");
  try{if(V.blob.size>48*1048576)throw new Error("el video pesa más de 48 MB");const ext=/mp4|quicktime/.test(V.blob.type)?"mp4":"webm",path=e.id+"-"+Date.now()+"."+ext;
   const up=await sb.storage.from("videos").upload(path,V.blob,{contentType:V.blob.type||"video/"+ext});if(up.error)throw up.error;
-  const r=await sb.from("entradas").update({video:path,video_por:ME.nombre}).eq("id",e.id);if(r.error)throw r.error;
-  if(e.video)sb.storage.from("videos").remove([e.video]);closeVid();await loadAll()}
+  let poster=null;try{const pb=await posterFrom(URL.createObjectURL(V.blob));const pp=path.replace(/\.\w+$/,"")+".jpg";const pu=await sb.storage.from("videos").upload(pp,pb,{contentType:"image/jpeg"});if(!pu.error)poster=pp}catch(x){}
+  const r=await sb.from("entradas").update({video:path,video_por:ME.nombre,video_poster:poster}).eq("id",e.id);if(r.error)throw r.error;
+  const old=[e.video,e.videoPoster].filter(Boolean);if(old.length)sb.storage.from("videos").remove(old);closeVid();await loadAll()}
  catch(err){$("vsave").disabled=false;vmsg("No se pudo subir"+errText(err))}};
+function grabFrame(v){const W=480,sc=Math.min(1,W/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement("canvas");c.width=Math.max(2,Math.round(v.videoWidth*sc));c.height=Math.max(2,Math.round(v.videoHeight*sc));
+ c.getContext("2d").drawImage(v,0,0,c.width,c.height);return new Promise((ok,ko)=>c.toBlob(b=>b?ok(b):ko(),"image/jpeg",.78))}
+function posterFrom(url){return new Promise((ok,ko)=>{const v=document.createElement("video");v.muted=true;v.playsInline=true;v.preload="auto";v.crossOrigin="anonymous";
+ const to=setTimeout(()=>ko(new Error("tiempo")),8000);
+ v.onloadeddata=()=>{v.currentTime=Math.min(0.6,(isFinite(v.duration)?v.duration:1)/2)};v.onseeked=async()=>{clearTimeout(to);try{ok(await grabFrame(v))}catch(e){ko(e)}};v.onerror=()=>{clearTimeout(to);ko(new Error("video"))};v.src=url})}
+const POSTERING=new Set();
+async function lazyPoster(e){if(!canWrite||!e||!e.video||e.videoPoster||POSTERING.has(e.id))return;POSTERING.add(e.id);
+ try{const pb=await posterFrom(vidUrl(e.video));const pp=e.video.replace(/\.\w+$/,"")+".jpg";const up=await sb.storage.from("videos").upload(pp,pb,{contentType:"image/jpeg",upsert:true});if(up.error)return;
+  const r=await sb.from("entradas").update({video_poster:pp}).eq("id",e.id);if(!r.error){e.videoPoster=pp;render()}}catch(x){}}
 async function delVid(){const e=ENT.find(x=>x.id===FID);if(!e||!e.video)return;if(!window.confirm("¿Quitar el video de esta palabra?"))return;
- const r=await sb.from("entradas").update({video:null,video_por:null}).eq("id",e.id);if(r.error)return alert("No se pudo quitar"+errText(r.error));
- sb.storage.from("videos").remove([e.video]);await loadAll()}
+ const r=await sb.from("entradas").update({video:null,video_por:null,video_poster:null}).eq("id",e.id);if(r.error)return alert("No se pudo quitar"+errText(r.error));
+ sb.storage.from("videos").remove([e.video,e.videoPoster].filter(Boolean));await loadAll()}
 
 // dictado
 const SRec=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -698,7 +714,7 @@ async function loadAll(){const[a,b,t]=await Promise.all([sb.from("entradas").sel
  TEMAS=t.data.map(x=>({id:x.id,nombre:str(x.nombre,40),orden:+x.orden||0}));
  ENT=a.data.map(v=>{const pw=v.palabras&&typeof v.palabras==="object"?v.palabras:{},fr=v.frases&&typeof v.frases==="object"?v.frases:{};const w={},f={};
   for(const l of LK){if(Array.isArray(pw[l]))w[l]=pw[l].filter(x=>typeof x==="string"&&x.trim()).map(x=>x.slice(0,120));if(typeof fr[l]==="string"&&fr[l].trim())f[l]=fr[l].slice(0,300)}
-  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),video:str(v.video,200),videoPor:str(v.video_por,30),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
+  return{semilla:str(v.semilla,10),fotoCred:str(v.foto_credito,200),fotoSrc:str(v.foto_fuente,300),video:str(v.video,200),videoPoster:str(v.video_poster,220),videoPor:str(v.video_por,30),id:String(v.id),bloque:v.bloque==="locos"?"locos":"puros",palabra:str(v.palabra,60),temaId:v.tema_id??null,words:w,frases:f,nota:str(v.nota,300),foto:str(v.foto),t:Date.parse(v.created_at)||0}});
  const vv={};b.data.forEach(v=>{const k=str(v.clave),p=str(v.persona);if(!k||!p)return;(vv[k]=vv[k]||{})[p]={archivo:str(v.archivo),t:Date.parse(v.updated_at)||0}});VOC=vv;
  loaded=true;render();if(FID)renderFicha();if(ME&&ME.admin)renderTemas();
  const m=location.hash.match(/^#p-(.+)$/);if(m&&!FID&&ENT.some(e=>e.id===m[1]))openFicha(m[1],false)}
